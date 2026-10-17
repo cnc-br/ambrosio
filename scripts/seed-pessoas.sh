@@ -5,7 +5,7 @@
 API_URL="http://localhost:3005"
 EMAIL="admin@admin.com"
 PASSWORD="admin"
-QUANTIDADE_PESSOAS=20
+QUANTIDADE_PESSOAS=50
 
 echo "=========================================="
 echo "Iniciando cadastro de pessoas de teste"

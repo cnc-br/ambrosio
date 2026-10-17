@@ -3,6 +3,7 @@ import { PrismaClient } from '../../../generated/client.js';
 export async function seedCidade(prisma: PrismaClient) {
   const estadoMG = await prisma.estado.findUnique({ where: { sigla: 'MG' } });
   const estadoSP = await prisma.estado.findUnique({ where: { sigla: 'SP' } });
+  const estadoTO = await prisma.estado.findUnique({ where: { sigla: 'TO' } });
 
   await prisma.cidade.create({
     data: {
@@ -71,6 +72,13 @@ export async function seedCidade(prisma: PrismaClient) {
     data: {
       nome: 'São Paulo',
       estadoId: estadoSP.id,
+    },
+  });
+
+  await prisma.cidade.create({
+    data: {
+      nome: 'Palmas',
+      estadoId: estadoTO.id,
     },
   });
 

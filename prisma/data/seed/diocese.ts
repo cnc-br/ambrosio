@@ -2,10 +2,10 @@ import { PrismaClient } from '../../../generated/client.js';
 
 export async function seedDiocese(prisma: PrismaClient) {
   // -------------------------------------------------------
-  // 0. Diocese de Guaxupé
+  // 0. Diocese de Palmas
   // -------------------------------------------------------
   const cidade = await prisma.cidade.findUnique({
-    where: { nome: 'Guaxupé' },
+    where: { nome: 'Palmas' },
   });
 
   const endereco = await prisma.endereco.create({
@@ -14,14 +14,14 @@ export async function seedDiocese(prisma: PrismaClient) {
       cep: '37830000',
       logradouro: 'Rua Francisco Ribeiro do Vale',
       numero: '242',
-      observacao: 'Bipo Dom Jose Lanza',
+      observacao: 'Bispo: Dom Eduardo Zielski',
       cidadeId: cidade.id,
     },
   });
 
   await prisma.diocese.create({
     data: {
-      descricao: 'Mitra Diocesana de Guaxupé',
+      descricao: 'Mitra Diocesana de Palmas',
       tipoDioceseId: 1,
       enderecoId: endereco.id,
     },
@@ -146,8 +146,8 @@ export async function seedDiocese(prisma: PrismaClient) {
 
   await prisma.diocese.create({
     data: {
-      descricao: 'Mitra Diocesana de Franca',
-      tipoDioceseId: 1,
+      descricao: 'Sé Imaculada Conceição de Franca',
+      tipoDioceseId: 2,
       enderecoId: enderecoFranca.id,
     },
   });

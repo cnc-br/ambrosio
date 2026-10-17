@@ -234,16 +234,16 @@ describe('DioceseController (e2e)', () => {
 
   it(`/${principal}/:id (PATCH) - 200 | deve atualizar uma diocese com campos válidos`, async () => {
     const dioceseData = {
-      descricao: faker.company.name(),
+      descricao: 'Palmas Francisco Beltrão',
       tipoDiocese: { id: 2, descricao: 'Diocese' },
       endereco: {
         id: 1,
-        cep: faker.location.zipCode('########'),
-        logradouro: faker.location.streetAddress(),
-        numero: '1226',
-        bairro: faker.location.secondaryAddress(),
-        cidade: faker.location.city(),
-        UF: 'SP',
+        cep: '85690025',
+        logradouro: 'Rua Bispo Dom Carlos',
+        numero: '819',
+        bairro: 'Centro',
+        cidade: 'Brasilia',
+        UF: 'DF',
       },
     };
 
