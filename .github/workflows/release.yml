@@ -46,6 +46,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Acionar deploy automático
-        run: |
-          curl -X GET "${{ secrets.EASY_PANEL_DEPLOY_AUTOMATIC }}"
+      - name: Deploy no AppServer
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            /opt/cnc/scripts/deploy-ambrosio.sh
