@@ -8,11 +8,12 @@ import { seedDiocese } from './data/seed/diocese.js';
 import { seedParoquia } from './data/seed/paroquia.js';
 import { seedComunidade } from './data/seed/comunidade.js';
 
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+const schema = process.env.DB_SCHEMA ?? 'ambrosio';
 
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaPg(
+  { connectionString: process.env.DATABASE_URL },
+  schema ? { schema } : {},
+);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
