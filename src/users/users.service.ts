@@ -132,6 +132,7 @@ export class UsersService extends BaseService {
   }
 
   remove(id: string) {
+    this.validateDeleteAbility('user');
     return this.prismaService.user.delete({
       where: { id },
     });
