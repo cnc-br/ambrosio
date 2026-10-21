@@ -5,6 +5,8 @@ on: [pull_request] # Executa o workflow em push e pull request
 jobs:
   test:
     runs-on: ubuntu-latest
+    env: 
+      DB_SCHEMA: ambrosio
 
     services:
       postgres:
