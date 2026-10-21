@@ -13,7 +13,7 @@ describe('SetorController (e2e)', () => {
     await app.close();
   });
 
-  it('/setor (GET) - get setor sem autenticacao', () => {
+  it('/setor (GET) - 200 | get setor sem autenticacao', () => {
     return request(app.getHttpServer())
       .get('/setor')
       .expect(200)
@@ -177,7 +177,7 @@ describe('SetorController (e2e)', () => {
       });
   });
 
-  it('/setor/3 (GET) - deve retornar Portinari - Setor 1', () => {
+  it('/setor/3 (GET) - 200 | deve retornar Portinari - Setor 1', () => {
     return request(app.getHttpServer())
       .get('/setor/3')
       .expect(200)
@@ -197,7 +197,7 @@ describe('SetorController (e2e)', () => {
       });
   });
 
-  it('/setor?regiaoId=1 (GET) - deve retornar setores da regiao Centro Oeste', () => {
+  it('/setor?regiaoId=1 (GET) - 200 | deve retornar setores da regiao Centro Oeste', () => {
     return request(app.getHttpServer())
       .get('/setor?regiaoId=1')
       .expect(200)

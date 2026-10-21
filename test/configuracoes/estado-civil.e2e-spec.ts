@@ -14,7 +14,7 @@ describe('EstadoCivilController (e2e)', () => {
     await app.close();
   });
 
-  it(`/${principal} (GET) | deve retornar os estados civis`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar os estados civis`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
       .expect(200)
@@ -37,7 +37,7 @@ describe('EstadoCivilController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) | cadastro de estado civil não é permitido`, () => {
+  it(`/${principal} (POST) - 404 | cadastro de estado civil não é permitido`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .expect(404)
@@ -48,7 +48,7 @@ describe('EstadoCivilController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (DELETE) | delete de estado civil não é permitido`, () => {
+  it(`/${principal} (DELETE) - 404 | delete de estado civil não é permitido`, () => {
     return request(app.getHttpServer())
       .delete(`/${principal}`)
       .expect(404)
@@ -59,7 +59,7 @@ describe('EstadoCivilController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PATCH) | atualizacao patch de estado civil não é permitido`, () => {
+  it(`/${principal} (PATCH) - 404 | atualizacao patch de estado civil não é permitido`, () => {
     return request(app.getHttpServer())
       .patch(`/${principal}`)
       .expect(404)
@@ -70,7 +70,7 @@ describe('EstadoCivilController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PUT) | atualizacao put de estado civil não é permitido`, () => {
+  it(`/${principal} (PUT) - 404 | atualizacao put de estado civil não é permitido`, () => {
     return request(app.getHttpServer())
       .put(`/${principal}`)
       .expect(404)

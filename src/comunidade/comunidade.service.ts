@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { accessibleBy } from '@casl/prisma';
 import { UpdateComunidadeDto } from './dto/update-comunidade.dto.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { PrismaService } from 'src/prisma.service.js';
@@ -57,8 +58,13 @@ export class ComunidadeService extends BaseService {
   async findAll(paroquiaId?: number, numeroDaComunidade?: number) {
     this.validateReadAbility('comunidade');
     const where: Prisma.comunidadeWhereInput = {
-      ...(paroquiaId != null && { paroquiaId }),
-      ...(numeroDaComunidade != null && { numeroDaComunidade }),
+      AND: [
+        accessibleBy(this.abilityService.ability, 'read').comunidade,
+        {
+          ...(paroquiaId != null && { paroquiaId }),
+          ...(numeroDaComunidade != null && { numeroDaComunidade }),
+        },
+      ],
     };
 
     const comunidades = await this.prisma.comunidade.findMany({

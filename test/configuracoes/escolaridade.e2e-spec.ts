@@ -40,7 +40,7 @@ describe('EscolaridadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) | cadastro de escolaridade não é permitido`, () => {
+  it(`/${principal} (POST) - 404 | cadastro de escolaridade não é permitido`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .expect(404)
@@ -51,7 +51,7 @@ describe('EscolaridadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (DELETE) | delete de escolaridade não é permitido`, () => {
+  it(`/${principal} (DELETE) - 404 | delete de escolaridade não é permitido`, () => {
     return request(app.getHttpServer())
       .delete(`/${principal}`)
       .expect(404)
@@ -62,7 +62,7 @@ describe('EscolaridadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PATCH) | atualizacao patch de escolaridade não é permitido`, () => {
+  it(`/${principal} (PATCH) - 404 | atualizacao patch de escolaridade não é permitido`, () => {
     return request(app.getHttpServer())
       .patch(`/${principal}`)
       .expect(404)
@@ -73,7 +73,7 @@ describe('EscolaridadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PUT) | atualizacao put de escolaridade não é permitido`, () => {
+  it(`/${principal} (PUT) - 404 | atualizacao put de escolaridade não é permitido`, () => {
     return request(app.getHttpServer())
       .put(`/${principal}`)
       .expect(404)

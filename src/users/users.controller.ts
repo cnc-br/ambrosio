@@ -7,15 +7,15 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { AdicionarParoquiasAoUsuarioDto } from './dto/adicionar-paroquias-ao-usuario.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
+import type { user } from 'src/prisma/generated-client.js';
 
 @UseGuards(AuthGuard, RoleGuard)
 @Controller('users')
@@ -33,8 +33,8 @@ export class UsersController {
   }
 
   @Get('me')
-  getMe(@Req() req: Request) {
-    return req.user;
+  getMe(@CurrentUser() user: user) {
+    return user;
   }
 
   @Get('roles')

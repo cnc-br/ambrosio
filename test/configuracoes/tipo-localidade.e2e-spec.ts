@@ -14,7 +14,7 @@ describe('TipoLocalidadeController (e2e)', () => {
     await app.close();
   });
 
-  it(`/${principal} (GET) | deve retornar os tipos de localidade`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar os tipos de localidade`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
       .expect(200)
@@ -25,7 +25,7 @@ describe('TipoLocalidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) | deve retornar o tipo de localidade by id`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar o tipo de localidade by id`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}/2`)
       .expect(200)
@@ -37,7 +37,7 @@ describe('TipoLocalidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) | cadastro de tipo de localidade não é permitido`, () => {
+  it(`/${principal} (POST) - 404 | cadastro de tipo de localidade não é permitido`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .expect(404)
@@ -48,7 +48,7 @@ describe('TipoLocalidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (DELETE) | delete de tipo de localidade não é permitido`, () => {
+  it(`/${principal} (DELETE) - 404 | delete de tipo de localidade não é permitido`, () => {
     return request(app.getHttpServer())
       .delete(`/${principal}`)
       .expect(404)
@@ -59,7 +59,7 @@ describe('TipoLocalidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PATCH) | atualizacao patch de tipo de localidade não é permitido`, () => {
+  it(`/${principal} (PATCH) - 404 | atualizacao patch de tipo de localidade não é permitido`, () => {
     return request(app.getHttpServer())
       .patch(`/${principal}`)
       .expect(404)
@@ -70,7 +70,7 @@ describe('TipoLocalidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PUT) | atualizacao put de tipo de localidade não é permitido`, () => {
+  it(`/${principal} (PUT) - 404 | atualizacao put de tipo de localidade não é permitido`, () => {
     return request(app.getHttpServer())
       .put(`/${principal}`)
       .expect(404)

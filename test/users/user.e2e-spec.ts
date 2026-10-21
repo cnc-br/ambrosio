@@ -33,7 +33,7 @@ describe('UserController (e2e)', () => {
     await app.close();
   });
 
-  it('/users (GET) - bloquear get users sem autenticacao', () => {
+  it('/users (GET) - 401 | bloquear get users sem autenticacao', () => {
     return request(app.getHttpServer())
       .get('/users')
       .expect(401)
@@ -44,7 +44,7 @@ describe('UserController (e2e)', () => {
       });
   });
 
-  it('/users/1 (GET) - bloquear get users by id sem autenticacao', () => {
+  it('/users/1 (GET) - 401 | bloquear get users by id sem autenticacao', () => {
     return request(app.getHttpServer())
       .get('/users/45')
       .expect(401)
@@ -55,7 +55,19 @@ describe('UserController (e2e)', () => {
       });
   });
 
-  it('/users (POST) - Deve criar um usuário com sucesso', async () => {
+  it('/users/me (GET) - 200 | retorna o usuario autenticado com a role', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/users/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({
+      email: 'admin@admin.com',
+      role: UserRoleEnum.ADMIN,
+    });
+  });
+
+  it('/users (POST) - 201 | Deve criar um usuário com sucesso', async () => {
     const response = await request(app.getHttpServer())
       .post('/users')
       .set('Authorization', `Bearer ${token}`)
@@ -92,7 +104,7 @@ describe('UserController (e2e)', () => {
     expect(typeof response.body.data.verifiedWhatsapp).toBe('boolean');
   });
 
-  it('/users (POST) - Não deve permitir e-mail duplicado', async () => {
+  it('/users (POST) - 400 | Não deve permitir e-mail duplicado', async () => {
     // Mock específico para esse teste
     vi
       .spyOn(mockSaoPedroPessoaService, 'getExternalPessoaByCpf')
@@ -119,7 +131,7 @@ describe('UserController (e2e)', () => {
     );
   });
 
-  it('/users (POST) - Não deve permitir CPF duplicado', async () => {
+  it('/users (POST) - 409 | Não deve permitir CPF duplicado', async () => {
     const response = await request(app.getHttpServer())
       .post('/users')
       .set('Authorization', `Bearer ${token}`)
@@ -136,7 +148,7 @@ describe('UserController (e2e)', () => {
     );
   });
 
-  it('/auth/login (POST) - Autenticar o usuario com sucesso', async () => {
+  it('/auth/login (POST) - 201 | Autenticar o usuario com sucesso', async () => {
     const response = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'admin@admin.com', password: 'admin' });
