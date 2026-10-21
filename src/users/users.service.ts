@@ -10,7 +10,9 @@ import * as bcrypt from 'bcrypt';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { PessoaService } from 'src/pessoa/pessoa.service.js';
 import { BaseService } from 'src/commons/base.service.js';
-import { UserRoleEnum } from 'neocatecumenal';
+import { UserRoleEnum, User } from 'neocatecumenal';
+import { PAROQUIA_BASICA_SELECT } from 'src/prisma/selects/paroquia.select.js';
+import { serializeUserResponse } from './user.serializer.js';
 
 const SALT_OR_ROUNDS = 10;
 
@@ -58,31 +60,41 @@ export class UsersService extends BaseService {
     return this.prismaService.user.findMany();
   }
 
-  async findOne(id: string) {
+  async findOne(id: string): Promise<User> {
     const user = await this.prismaService.user.findUniqueOrThrow({
       where: { id },
       include: {
         usuarioParoquias: {
           select: {
             paroquia: {
-              select: {
-                id: true,
-                descricao: true
-              },
+              select: PAROQUIA_BASICA_SELECT,
             },
           },
         },
       },
     });
 
-    return {
-      ...user,
-      usuarioParoquias: user.usuarioParoquias.map(({ paroquia }) => paroquia),
-    };
+    const pessoa = user.pessoaId
+      ? await this.pessoaService.findOne(user.pessoaId)
+      : undefined;
+
+    return serializeUserResponse(user, pessoa);
   }
 
   findOneByEmail(email: string) {
     return this.prismaService.user.findUniqueOrThrow({ where: { email } });
+  }
+
+  findByIdWithPassword(id: string) {
+    return this.prismaService.user.findUniqueOrThrow({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        active: true,
+      },
+    });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {

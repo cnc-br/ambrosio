@@ -13,6 +13,7 @@ describe('UserController (e2e)', () => {
   const password = faker.internet.password();
   const whatsapp = '16999999999';
   let token = '';
+  let createdUserId = '';
 
   beforeAll(async () => {
     app = await setupTestModule([
@@ -102,6 +103,35 @@ describe('UserController (e2e)', () => {
     expect(response.body.data).toHaveProperty('updatedAt');
     expect(typeof response.body.data.password).toBe('string');
     expect(typeof response.body.data.verifiedWhatsapp).toBe('boolean');
+
+    createdUserId = response.body.data.id;
+  });
+
+  it('/users/:id (GET) - 200 | retorna o usuário no contrato User, sem dados sensíveis', async () => {
+    const response = await request(app.getHttpServer())
+      .get(`/users/${createdUserId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({
+      id: createdUserId,
+      email,
+      whatsapp,
+      verifiedWhatsapp: false,
+      active: false,
+      role: UserRoleEnum.NAO_IDENTIFICADO,
+    });
+    expect(response.body.data).toHaveProperty('createdAt');
+    expect(response.body.data.paroquias).toEqual([]);
+    expect(response.body.data).not.toHaveProperty('password');
+    expect(response.body.data).not.toHaveProperty('resetPasswordToken');
+    expect(response.body.data).not.toHaveProperty('resetPasswordExpires');
+
+    // usuário criado via CPF tem pessoa vinculada, serializada pelo contrato Pessoa
+    expect(response.body.data.pessoa).toBeDefined();
+    expect(response.body.data.pessoa.nome).toBeDefined();
+    expect(response.body.data.pessoa.cpf).toBeDefined();
+    expect(response.body.data.pessoa.externalId).toBeDefined();
   });
 
   it('/users (POST) - 400 | Não deve permitir e-mail duplicado', async () => {

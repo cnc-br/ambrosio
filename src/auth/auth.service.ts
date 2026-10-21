@@ -85,7 +85,7 @@ export class AuthService {
     newPassword: string,
   ) {
     this.logger.log(`Usuário ${userId} alterando senha`);
-    const user = await this.userService.findOne(userId);
+    const user = await this.userService.findByIdWithPassword(userId);
 
     if (!user || !user.active) {
       throw new UnauthorizedException('Usuário não encontrado ou inativo.');
