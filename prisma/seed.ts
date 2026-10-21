@@ -72,6 +72,28 @@ async function main() {
       },
     });
 
+    const secretariaCnc = await prisma.user.create({
+      data: {
+        email: 'secretaria@admin.com',
+        password:
+          '$2b$10$.TT7jgY.IqTW/3qg9RXw4.y20H4ROVqfj0TIjBi5l9ks2fb5ueQsC',
+        role: 'SECRETARIA_CNC',
+        whatsapp: '16999239999',
+        active: true,
+      },
+    });
+
+    const primeiraParoquia = await prisma.paroquia.findFirstOrThrow({
+      orderBy: { id: 'asc' },
+    });
+
+    await prisma.usuarioParoquia.create({
+      data: {
+        userId: secretariaCnc.id,
+        paroquiaId: primeiraParoquia.id,
+      },
+    });
+
     console.log('---------------------------------');
     console.log('Usuario padrao preenchido com sucesso!');
   }

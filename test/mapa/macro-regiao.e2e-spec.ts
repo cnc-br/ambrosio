@@ -13,7 +13,7 @@ describe('MacroRegiaoController (e2e)', () => {
     await app.close();
   });
 
-  it('/macro-regiao (GET) - get macro-regiao sem autenticacao', () => {
+  it('/macro-regiao (GET) - 200 | get macro-regiao sem autenticacao', () => {
     return request(app.getHttpServer())
       .get('/macro-regiao')
       .expect(200)
@@ -36,7 +36,7 @@ describe('MacroRegiaoController (e2e)', () => {
       });
   });
 
-  it('/macro-regiao/2 (GET) - deve retornar Brasília', () => {
+  it('/macro-regiao/2 (GET) - 200 | deve retornar Brasília', () => {
     return request(app.getHttpServer())
       .get('/macro-regiao/2')
       .expect(200)

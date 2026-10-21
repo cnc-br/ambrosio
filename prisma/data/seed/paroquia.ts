@@ -11,10 +11,10 @@ export async function seedParoquia(prisma: PrismaClient) {
   const endereco0 = await prisma.endereco.create({
     data: {
       bairro: 'Centro',
-      cep: '14400000',
-      logradouro: 'Rua Tiradentes',
+      cep: '14400660',
+      logradouro: 'Rua do comércio',
       numero: '789',
-      observacao: 'Padre Norival Sardinha Filho',
+      observacao: 'Padre Ramon foi catequista aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -22,7 +22,7 @@ export async function seedParoquia(prisma: PrismaClient) {
   await prisma.paroquia.create({
     data: {
       descricao: 'Paróquia Nossa Senhora Aparecida',
-      dioceseId: 1,
+      dioceseId: 6,
       enderecoId: endereco0.id,
       setorId: 1,
     },
@@ -37,7 +37,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14400070',
       logradouro: 'Rua General Telles',
       numero: '351',
-      observacao: '',
+      observacao: 'Padre João foi cura aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -60,7 +60,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14403000',
       logradouro: 'Rua Saldanha Marinho',
       numero: '2500',
-      observacao: '',
+      observacao: 'Padre Carlos foi cura aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -83,7 +83,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14404000',
       logradouro: 'Rua Major Claudiano',
       numero: '1800',
-      observacao: '',
+      observacao: 'Padre Maria foi cura aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -106,7 +106,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14401000',
       logradouro: 'Rua Comandante Salgado',
       numero: '1200',
-      observacao: '',
+      observacao: 'Padre João foi cura aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -129,7 +129,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14405000',
       logradouro: 'Rua Voluntários da Franca',
       numero: '600',
-      observacao: '',
+      observacao: 'Padre Pedro foi cura aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -152,7 +152,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14402000',
       logradouro: 'Rua Padre Anchieta',
       numero: '450',
-      observacao: '',
+      observacao: 'Algumas comunidades se reúnem aqui',
       cidadeId: cidadeFranca.id,
     },
   });
@@ -175,7 +175,7 @@ export async function seedParoquia(prisma: PrismaClient) {
       cep: '14406000',
       logradouro: 'Rua São José',
       numero: '320',
-      observacao: '',
+      observacao: 'Padre João foi cura aqui',
       cidadeId: cidadeFranca.id,
     },
   });

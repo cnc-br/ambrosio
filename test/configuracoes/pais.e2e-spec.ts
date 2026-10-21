@@ -14,7 +14,7 @@ describe('PaisController (e2e)', () => {
     await app.close();
   });
 
-  it(`/${principal} (GET) | deve retornar os paises cadastrados na base`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar os paises cadastrados na base`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
       .expect(200)
@@ -29,7 +29,7 @@ describe('PaisController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) | deve retornar um pais  by id`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar um pais  by id`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}/2`)
       .expect(200)
@@ -51,7 +51,7 @@ describe('PaisController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) | deve cadastrar um pais com sucesso`, () => {
+  it(`/${principal} (POST) - 201 | deve cadastrar um pais com sucesso`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .send({
@@ -63,7 +63,7 @@ describe('PaisController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id (DELETE) | delete de pais não é permitido`, () => {
+  it(`/${principal}/:id (DELETE) - 404 | delete de pais não é permitido`, () => {
     return request(app.getHttpServer())
       .delete(`/${principal}/2`)
       .expect(404)
@@ -74,7 +74,7 @@ describe('PaisController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id (PATCH) | atualizacao patch de pais não é permitido`, () => {
+  it(`/${principal}/:id (PATCH) - 404 | atualizacao patch de pais não é permitido`, () => {
     return request(app.getHttpServer())
       .patch(`/${principal}/3`)
       .expect(404)
@@ -85,7 +85,7 @@ describe('PaisController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id (PUT) | atualizacao put de pais não é permitido`, () => {
+  it(`/${principal}/:id (PUT) - 404 | atualizacao put de pais não é permitido`, () => {
     return request(app.getHttpServer())
       .put(`/${principal}/2`)
       .expect(404)
@@ -96,7 +96,7 @@ describe('PaisController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) | deve retornar 400 ao cadastrar um pais com nome maior que 100 caracteres`, () => {
+  it(`/${principal} (POST) - 400 | deve retornar 400 ao cadastrar um pais com nome maior que 100 caracteres`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .send({

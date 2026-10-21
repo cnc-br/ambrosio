@@ -14,7 +14,7 @@ describe('TipoDioceseController (e2e)', () => {
     await app.close();
   });
 
-  it(`/${principal} (GET) | deve retornar os tipos de diocese`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar os tipos de diocese`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
       .expect(200)
@@ -25,7 +25,7 @@ describe('TipoDioceseController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) | deve retornar os tipo de diocese by id`, () => {
+  it(`/${principal} (GET) - 200 | deve retornar os tipo de diocese by id`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}/2`)
       .expect(200)
@@ -49,7 +49,7 @@ describe('TipoDioceseController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) | cadastro de tipo de diocese não é permitido`, () => {
+  it(`/${principal} (POST) - 404 | cadastro de tipo de diocese não é permitido`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .expect(404)
@@ -60,7 +60,7 @@ describe('TipoDioceseController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (DELETE) | delete de tipo de diocese não é permitido`, () => {
+  it(`/${principal} (DELETE) - 404 | delete de tipo de diocese não é permitido`, () => {
     return request(app.getHttpServer())
       .delete(`/${principal}`)
       .expect(404)
@@ -71,7 +71,7 @@ describe('TipoDioceseController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PATCH) | atualizacao patch de tipo de diocese não é permitido`, () => {
+  it(`/${principal} (PATCH) - 404 | atualizacao patch de tipo de diocese não é permitido`, () => {
     return request(app.getHttpServer())
       .patch(`/${principal}`)
       .expect(404)
@@ -82,7 +82,7 @@ describe('TipoDioceseController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (PUT) | atualizacao put de tipo de diocese não é permitido`, () => {
+  it(`/${principal} (PUT) - 404 | atualizacao put de tipo de diocese não é permitido`, () => {
     return request(app.getHttpServer())
       .put(`/${principal}`)
       .expect(404)

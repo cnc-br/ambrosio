@@ -245,8 +245,6 @@ export class PessoaService extends BaseService {
     }
 
     const pessoa = await this.findOneByCpf(cpf);
-    this.logger.log(`External pessoa fetched: ${JSON.stringify(pessoa)}`);
-
     if (pessoa) {
       this.logger.warn(
         `CPF ${cpf} já está cadastrado. Pertence a: ${pessoa.nome} (ID: ${pessoa.id})`,

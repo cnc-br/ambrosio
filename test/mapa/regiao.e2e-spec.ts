@@ -13,7 +13,7 @@ describe('RegiaoController (e2e)', () => {
     await app.close();
   });
 
-  it('/regiao (GET) - get regiao sem autenticacao', () => {
+  it('/regiao (GET) - 200 | get regiao sem autenticacao', () => {
     return request(app.getHttpServer())
       .get('/regiao')
       .expect(200)
@@ -77,7 +77,7 @@ describe('RegiaoController (e2e)', () => {
       });
   });
 
-  it('/regiao/3 (GET) - deve retornar Portinari - Setor 1', () => {
+  it('/regiao/3 (GET) - 200 | deve retornar Portinari - Setor 1', () => {
     return request(app.getHttpServer())
       .get('/regiao/3')
       .expect(200)
@@ -96,7 +96,7 @@ describe('RegiaoController (e2e)', () => {
       });
   });
 
-  it('/regiao/aaaa (GET) - deve retornar erro de validação', () => {
+  it('/regiao/aaaa (GET) - 400 | deve retornar erro de validação', () => {
     return request(app.getHttpServer())
       .get('/regiao/aaaa')
       .expect(400)

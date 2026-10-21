@@ -4,12 +4,12 @@ import {
   NotFoundException,
   Post,
   UseGuards,
-  Request,
 } from '@nestjs/common';
 import { LoginDto } from './login.dto.js';
 import { AuthService } from './auth.service.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { AuthGuard } from './auth.guard.js';
+import { CurrentUser } from './current-user.decorator.js';
 
 @Controller('auth')
 export class AuthController {
@@ -32,11 +32,11 @@ export class AuthController {
   @Post('change-password')
   @UseGuards(AuthGuard)
   async changePassword(
-    @Request() req,
+    @CurrentUser('id') id: string,
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
     return this.authService.changePassword(
-      req.user.id,
+      id,
       changePasswordDto.currentPassword,
       changePasswordDto.newPassword,
     );

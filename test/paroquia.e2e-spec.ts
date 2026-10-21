@@ -357,7 +357,7 @@ describe('ParoquiaController (e2e)', () => {
 
   it(`/${principal} (PATCH) - 200 | deve atualizar uma paroquia com campos válidos`, async () => {
     const paroquiaData = {
-      descricao: 'Nossa Senhora do Desterro Alterada',
+      descricao: 'Nossa Senhora das Dores',
       diocese: { id: 6 },
       endereco: {
         id: 9,

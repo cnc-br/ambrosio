@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserRoleEnum } from 'neocatecumenal';
 import { PrismaService } from 'src/prisma.service.js';
 import { ParoquiaService } from 'src/paroquia/paroquia.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
@@ -47,5 +48,50 @@ describe('ComunidadeService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(prismaService).toBeDefined();
+  });
+
+  it('inclui o filtro de escopo de paróquia no where de findAll', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prismaMock = {
+      comunidade: { findMany },
+    } as unknown as PrismaService;
+
+    const caslAbilityService = new CaslAbilityService();
+    caslAbilityService.createForUser({
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+
+    const scopedService = new ComunidadeService(
+      prismaMock,
+      {} as ParoquiaService,
+      {} as HistoricoService,
+      caslAbilityService,
+    );
+
+    await scopedService.findAll(1);
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            {
+              OR: [
+                {
+                  paroquia: {
+                    is: {
+                      usuarioParoquias: {
+                        some: { userId: 'usuario-secretaria' },
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+            { paroquiaId: 1 },
+          ],
+        },
+      }),
+    );
   });
 });
