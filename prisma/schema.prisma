@@ -301,7 +301,7 @@ model comunidade {
   etapa                etapa?                @relation(fields: [etapaAtualId], references: [id])
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @default(now()) @updatedAt
-  paroquia             paroquia              @relation(fields: [paroquiaId], references: [id])
+  paroquia             paroquia              @relation(fields: [paroquiaId], references: [id], onDelete: Cascade)
   comunidadeEtapas     comunidadeEtapa[]
   comunidadePessoas    comunidadePessoa[]
   comunidadeHistoricos comunidadeHistorico[]

@@ -427,4 +427,107 @@ describe('ParoquiaController (e2e)', () => {
         expect(res.body.statusCode).toBe(404);
       });
   });
+
+  it(`/${principal}/1 (DELETE) - 401 | nao pode excluir paroquia sem autenticacao`, () => {
+    return request(app.getHttpServer())
+      .delete(`/${principal}/1`)
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.message).toBe('Invalid or missing token');
+        expect(res.body.error).toBe('Unauthorized');
+        expect(res.body.statusCode).toBe(401);
+      });
+  });
+
+  it(`/${principal}/1 (DELETE) - 403 | nao pode excluir paroquia sem permissao`, async () => {
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'ronaldinho@admin.com', password: 'admin' });
+
+    const tokenNaoPermitido = response.body.data.access_token;
+
+    return request(app.getHttpServer())
+      .delete(`/${principal}/1`)
+      .set('Authorization', `Bearer ${tokenNaoPermitido}`)
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          'Você não tem permissão para delete paroquia',
+        );
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      });
+  });
+
+  it(`/${principal}/987654 (DELETE) - 404 | nao pode excluir paroquia inexistente`, () => {
+    return request(app.getHttpServer())
+      .delete(`/${principal}/987654`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          `O registro de 'Paroquia' não foi encontrado.`,
+        );
+        expect(res.body.statusCode).toBe(404);
+      });
+  });
+
+  it(`/${principal} (DELETE) - 200 | exclui paroquia e remove comunidade e endereco em cascata`, async () => {
+    const paroquiaData = {
+      descricao: `Paroquia para exclusao ${Date.now()}`,
+      diocese: { id: 1 },
+      setor: { id: 1 },
+      endereco: {
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    };
+
+    const created = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send(paroquiaData)
+      .expect(201);
+
+    const paroquiaId = created.body.data.id;
+    const enderecoId = created.body.data.endereco.id;
+
+    const comunidadeData = {
+      numeroDaComunidade: 1,
+      quantidadeMembros: 10,
+      paroquiaId,
+    };
+
+    const comunidadeCreated = await request(app.getHttpServer())
+      .post('/comunidade')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send(comunidadeData)
+      .expect(201);
+
+    const comunidadeId = comunidadeCreated.body.data.id;
+
+    const deleted = await request(app.getHttpServer())
+      .delete(`/${principal}/${paroquiaId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(deleted.body.data.id).toBe(paroquiaId);
+
+    // Cascata: a comunidade vinculada e o endereco da paroquia nao existem mais
+    await request(app.getHttpServer())
+      .get(`/comunidade/${comunidadeId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/endereco/${enderecoId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+  });
 });
