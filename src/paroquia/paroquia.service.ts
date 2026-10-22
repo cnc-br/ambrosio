@@ -144,8 +144,24 @@ export class ParoquiaService extends BaseService {
     }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} paroquia`;
+  async remove(id: number) {
+    this.validateDeleteAbility('paroquia');
+
+    const result = await this.prisma.$transaction(async (transaction) => {
+      const paroquia = await transaction.paroquia.delete({
+        where: { id },
+        select: PAROQUIA_SELECT,
+      });
+
+      await transaction.endereco.delete({
+        where: { id: paroquia.endereco.id },
+      });
+
+      return paroquia;
+    });
+
+    this.logger.log(`Paroquia id ${id} removida com sucesso`);
+    return serializeParoquia(result);
   }
 
   private validarEnderecoPertenceParoquia(
