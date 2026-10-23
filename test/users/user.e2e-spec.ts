@@ -2,12 +2,14 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { faker } from '@faker-js/faker/locale/pt_BR';
 import { setupTestModule } from '../test-setup.js';
+import { PrismaService } from 'src/prisma.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { mockSaoPedroPessoaService } from '../../test/mocks/sao-pedro-api-mock.js';
 import { UserRoleEnum } from 'neocatecumenal';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   const email = 'carmem@neocatecumenal.com.es';
   const cpf = '11122233345';
   const password = faker.internet.password();
@@ -22,6 +24,7 @@ describe('UserController (e2e)', () => {
         value: mockSaoPedroPessoaService,
       },
     ]);
+    prisma = app.get(PrismaService);
 
     const response = await request(app.getHttpServer())
       .post('/auth/login')
@@ -186,5 +189,112 @@ describe('UserController (e2e)', () => {
     expect(response.status).toBe(201);
     expect(response.body.data.access_token).toBeDefined();
     expect(response.body.data.access_token_type).toBeDefined();
+  });
+
+  it('/users/45 (DELETE) - 401 | nao pode excluir usuario sem autenticacao', () => {
+    return request(app.getHttpServer())
+      .delete('/users/45')
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.message).toBe('Invalid or missing token');
+        expect(res.body.error).toBe('Unauthorized');
+        expect(res.body.statusCode).toBe(401);
+      });
+  });
+
+  it('/users/45 (DELETE) - 403 | nao pode excluir usuario sem permissao', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'ronaldinho@admin.com', password: 'admin' });
+
+    const tokenNaoPermitido = response.body.data.access_token;
+
+    return request(app.getHttpServer())
+      .delete('/users/45')
+      .set('Authorization', `Bearer ${tokenNaoPermitido}`)
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          'Você não tem permissão para delete user',
+        );
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      });
+  });
+
+  it('/users/usuario-inexistente (DELETE) - 404 | nao pode excluir usuario inexistente', () => {
+    return request(app.getHttpServer())
+      .delete('/users/usuario-inexistente')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          `O registro de 'Usuário' não foi encontrado.`,
+        );
+        expect(res.body.statusCode).toBe(404);
+      });
+  });
+
+  it('/users/:id (DELETE) - 204 | exclui usuario sem corpo e remove vinculos usuario-paroquia', async () => {
+    const deleteEmail = 'usuario-delete@admin.com';
+    const deleteCpf = '74147855632';
+
+    // Pessoa 2 do seed (externalId id-usuario-cpf-duplicado-e2e-2), sem usuário vinculado
+    vi
+      .spyOn(mockSaoPedroPessoaService, 'getExternalPessoaByCpf')
+      .mockResolvedValueOnce({
+        id: 2,
+        externalId: 'id-usuario-cpf-duplicado-e2e-2',
+        nome: 'Pessoa Delete Mock',
+        cpf: deleteCpf,
+        ativo: true,
+      });
+
+    const created = await request(app.getHttpServer())
+      .post('/users')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        email: deleteEmail,
+        cpf: deleteCpf,
+        password: 'admin',
+        whatsapp,
+      })
+      .expect(201);
+
+    const userId = created.body.data.id;
+
+    await request(app.getHttpServer())
+      .patch(`/users/${userId}/paroquias`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ paroquiaIds: [1] })
+      .expect(200);
+
+    const vinculosAntes = await prisma.usuarioParoquia.count({
+      where: { userId },
+    });
+    expect(vinculosAntes).toBeGreaterThan(0);
+
+    const deleted = await request(app.getHttpServer())
+      .delete(`/users/${userId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    expect(deleted.body).toEqual({});
+
+    await request(app.getHttpServer())
+      .get(`/users/${userId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    const vinculosDepois = await prisma.usuarioParoquia.count({
+      where: { userId },
+    });
+    expect(vinculosDepois).toBe(0);
+
+    // Preservação da pessoa vinculada (pessoa id 2 do seed)
+    const pessoaPreservada = await prisma.pessoa.findUnique({
+      where: { id: 2 },
+    });
+    expect(pessoaPreservada).toBeDefined();
   });
 });
