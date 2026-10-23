@@ -69,9 +69,23 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
     can('read', 'pessoa');
     can('read', 'diocese');
     can('read', 'localidade');
-    can('read', 'paroquia');
+    can('read', 'paroquia', {
+      usuarioParoquias: { some: { userId: user.id } }
+    });
     can('read', 'comunidade', {
       paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } },
+    });
+    can('create', 'comunidade', {
+      paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } },
+    });
+    can('update', 'comunidade', {
+      paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } },
+    });
+    can('create', 'etapa', {
+      comunidade: { is: { paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } } } },
+    });
+    can('update', 'etapa', {
+      comunidade: { is: { paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } } } },
     });
   },
 };

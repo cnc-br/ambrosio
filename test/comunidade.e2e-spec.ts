@@ -159,4 +159,204 @@ describe('ComunidadeController (e2e)', () => {
         expect(res.body.data).toHaveLength(totalDeComunidades);
       });
   });
+
+  it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra comunidade na propria paroquia`, async () => {
+    const numerosUsados = await prisma.comunidade.findMany({
+      where: { paroquiaId: paroquiaDoUsuario },
+      select: { numeroDaComunidade: true },
+    });
+    const numeroLivre = Array.from({ length: 30 }, (_, i) => i + 1).find(
+      (n) => !numerosUsados.some((c) => c.numeroDaComunidade === n),
+    );
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        numeroDaComunidade: numeroLivre,
+        quantidadeMembros: 10,
+        paroquiaId: paroquiaDoUsuario,
+      })
+      .expect(201);
+
+    expect(response.body.data).toHaveProperty('id');
+    expect(response.body.data.paroquia.id).toBe(paroquiaDoUsuario);
+  });
+
+  it(`/${principal} (POST) - 403 | SECRETARIA_CNC nao cadastra comunidade fora das suas paroquias`, () => {
+    return request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        numeroDaComunidade: 20,
+        quantidadeMembros: 10,
+        paroquiaId: paroquiaForaDoEscopo,
+      })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      });
+  });
+
+  it(`/${principal} (POST) - 404 | SECRETARIA_CNC nao cadastra comunidade com paroquia inexistente`, () => {
+    return request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        numeroDaComunidade: 21,
+        quantidadeMembros: 10,
+        paroquiaId: 987654,
+      })
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          `O registro de 'Paroquia' não foi encontrado.`,
+        );
+        expect(res.body.statusCode).toBe(404);
+      });
+  });
+
+  it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC atualiza comunidade da propria paroquia`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaDoUsuario },
+    });
+
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${comunidade.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .set('Content-Type', 'application/json')
+      .send({ quantidadeMembros: 25 })
+      .expect(200);
+  });
+
+  it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC nao atualiza comunidade fora das suas paroquias`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaForaDoEscopo },
+    });
+
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${comunidade.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .set('Content-Type', 'application/json')
+      .send({ quantidadeMembros: 25 })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      });
+  });
+
+  it(`/${principal}/999999 (PATCH) - 404 | nao atualiza comunidade inexistente`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${principal}/999999`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .set('Content-Type', 'application/json')
+      .send({ quantidadeMembros: 25 })
+      .expect(404)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          `O registro de 'Comunidade' não foi encontrado.`,
+        );
+        expect(res.body.statusCode).toBe(404);
+      });
+  });
+
+  it(`/${principal} (POST) - 201 | ADMIN cadastra comunidade em qualquer paroquia`, async () => {
+    const numerosUsados = await prisma.comunidade.findMany({
+      where: { paroquiaId: paroquiaForaDoEscopo },
+      select: { numeroDaComunidade: true },
+    });
+    const numeroLivre = Array.from({ length: 30 }, (_, i) => i + 1).find(
+      (n) => !numerosUsados.some((c) => c.numeroDaComunidade === n),
+    );
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        numeroDaComunidade: numeroLivre,
+        quantidadeMembros: 10,
+        paroquiaId: paroquiaForaDoEscopo,
+      })
+      .expect(201);
+
+    expect(response.body.data).toHaveProperty('id');
+    expect(response.body.data.paroquia.id).toBe(paroquiaForaDoEscopo);
+  });
+
+  it(`/${principal}/:id (PATCH) - 200 | ADMIN atualiza comunidade de qualquer paroquia`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaForaDoEscopo },
+    });
+
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${comunidade.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .set('Content-Type', 'application/json')
+      .send({ quantidadeMembros: 30 })
+      .expect(200);
+  });
+
+  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 201 | SECRETARIA_CNC adiciona pessoa em comunidade da propria paroquia`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaDoUsuario },
+    });
+    const vinculadas = await prisma.comunidadePessoa.findMany({
+      where: { comunidadeId: comunidade.id },
+      select: { pessoaId: true },
+    });
+    const pessoa = await prisma.pessoa.findFirst({
+      where: { id: { notIn: vinculadas.map((v) => v.pessoaId) } },
+      select: { id: true },
+    });
+    expect(pessoa).toBeDefined();
+
+    await request(app.getHttpServer())
+      .post(`/${principal}/${comunidade.id}/pessoa/${pessoa.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .expect(201);
+
+    // Cleanup: desfaz o vínculo criado pelo teste
+    await request(app.getHttpServer())
+      .delete(`/${principal}/${comunidade.id}/pessoa/${pessoa.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .expect(200);
+  });
+
+  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 403 | SECRETARIA_CNC nao adiciona pessoa em comunidade fora das suas paroquias`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaForaDoEscopo },
+    });
+    const pessoa = await prisma.pessoa.findFirst({ select: { id: true } });
+
+    return request(app.getHttpServer())
+      .post(`/${principal}/${comunidade.id}/pessoa/${pessoa.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      });
+  });
+
+  it(`/${principal}/:id/pessoa/:pessoaId (DELETE) - 403 | SECRETARIA_CNC nao remove pessoa em comunidade fora das suas paroquias`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaForaDoEscopo },
+    });
+    const pessoa = await prisma.pessoa.findFirst({ select: { id: true } });
+
+    return request(app.getHttpServer())
+      .delete(`/${principal}/${comunidade.id}/pessoa/${pessoa.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      });
+  });
 });

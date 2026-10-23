@@ -64,7 +64,6 @@ describe('ComunidadeService', () => {
 
     const scopedService = new ComunidadeService(
       prismaMock,
-      {} as ParoquiaService,
       {} as HistoricoService,
       caslAbilityService,
     );

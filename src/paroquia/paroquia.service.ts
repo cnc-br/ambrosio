@@ -52,6 +52,7 @@ export class ParoquiaService extends BaseService {
   }
 
   async findAll(query: FindAllParoquiasQueryDto): Promise<Paroquia[]> {
+    this.validateReadAbility('paroquia');
     const dioceseId = query.dioceseId ? +query.dioceseId : undefined;
     const cidadeId = query.cidadeId ? +query.cidadeId : undefined;
     

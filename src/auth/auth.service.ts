@@ -25,9 +25,6 @@ export class AuthService {
       'Credenciais inválidas. Verifique se o email e senha estão corretos e se o usuario esta ativo no sistema.';
 
     if (!user || !user.active) {
-      this.logger.debug(
-        `Falha de login para email ${loginDto.email}: usuário não encontrado ou inativo.`,
-      );
       throw new UnauthorizedException(unauthorizedMessage);
     }
 
@@ -37,9 +34,6 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      this.logger.debug(
-        `Falha de login para email ${loginDto.email}: senha incorreta.`,
-      );
       throw new UnauthorizedException(unauthorizedMessage);
     }
 
