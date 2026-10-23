@@ -7,7 +7,10 @@ import {
   Param,
   Delete,
   UseGuards,
+  Res,
+  HttpStatus,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -64,7 +67,8 @@ export class UsersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  async remove(@Param('id') id: string, @Res() res: Response) {
+    await this.usersService.remove(id);
+    res.status(HttpStatus.NO_CONTENT).end();
   }
 }

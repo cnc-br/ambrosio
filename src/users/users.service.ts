@@ -131,9 +131,9 @@ export class UsersService extends BaseService {
     });
   }
 
-  remove(id: string) {
+  async remove(id: string) {
     this.validateDeleteAbility('user');
-    return this.prismaService.user.delete({
+    await this.prismaService.user.delete({
       where: { id },
     });
   }
