@@ -1,10 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { accessibleBy } from '@casl/prisma';
 import { UpdateComunidadeDto } from './dto/update-comunidade.dto.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
-import { ParoquiaService } from 'src/paroquia/paroquia.service.js';
 import { Comunidade } from 'neocatecumenal';
 import { Prisma } from 'src/prisma/generated-client.js';
 import { HistoricoService } from './historico/historico.service.js';
@@ -16,7 +15,6 @@ import { CreateComunidadeDto } from './dto/create-comunidade.dto.js';
 export class ComunidadeService extends BaseService {
   constructor(
     private prisma: PrismaService,
-    private readonly paroquiaService: ParoquiaService,
     private readonly historicoService: HistoricoService,
     protected readonly abilityService: CaslAbilityService,
   ) {
@@ -26,9 +24,29 @@ export class ComunidadeService extends BaseService {
   async create(createComunidadeDto: CreateComunidadeDto) {
     this.validateCreateAbility('comunidade');
 
-    const paroquia = await this.paroquiaService.findOne(
-      createComunidadeDto.paroquiaId,
-    );
+    const createScope = accessibleBy(
+      this.abilityService.ability,
+      'create',
+    ).comunidade;
+
+    const paroquia = await this.prisma.paroquia.findFirst({
+      where: {
+        AND: [
+          { id: createComunidadeDto.paroquiaId },
+          this.condicaoEscopoDeParoquia(createScope),
+        ],
+      },
+    });
+
+    if (!paroquia) {
+      // Distingue 404 (paróquia inexistente) de 403 (paróquia fora do escopo)
+      await this.prisma.paroquia.findUniqueOrThrow({
+        where: { id: createComunidadeDto.paroquiaId },
+      });
+      throw new ForbiddenException(
+        'Você não tem permissão para cadastrar comunidade fora das suas paróquias.',
+      );
+    }
 
     const comunidade = await this.prisma.comunidade.create({
       data: {
@@ -137,6 +155,8 @@ export class ComunidadeService extends BaseService {
   async update(id: number, updateComunidadeDto: UpdateComunidadeDto) {
     this.validateUpdateAbility('comunidade');
 
+    await this.validarComunidadeDentroDoEscopoDeAtualizacao(id);
+
     await this.historicoService.create({
       comunidadeId: id,
       numeroComunidade: updateComunidadeDto.numeroDaComunidade,
@@ -162,8 +182,9 @@ export class ComunidadeService extends BaseService {
     });
   }
 
-  adicionarPessoa(comunidadeId: number, pessoaId: number) {
+  async adicionarPessoa(comunidadeId: number, pessoaId: number) {
     this.validateUpdateAbility('comunidade');
+    await this.validarComunidadeDentroDoEscopoDeAtualizacao(comunidadeId);
     return this.prisma.comunidadePessoa.create({
       data: {
         dataEntrada: new Date(),
@@ -173,8 +194,9 @@ export class ComunidadeService extends BaseService {
     });
   }
 
-  removerPessoa(comunidadeId: number, pessoaId: number) {
+  async removerPessoa(comunidadeId: number, pessoaId: number) {
     this.validateUpdateAbility('comunidade');
+    await this.validarComunidadeDentroDoEscopoDeAtualizacao(comunidadeId);
     return this.prisma.comunidadePessoa.delete({
       where: {
         comunidadeId_pessoaId: {
@@ -183,5 +205,52 @@ export class ComunidadeService extends BaseService {
         },
       },
     });
+  }
+
+  /**
+   * Garante que a comunidade existe e está dentro do escopo de `update` do usuário
+   * (paróquias vinculadas em `usuarioParoquia`), distinguindo 404 (inexistente)
+   * de 403 (existente fora do escopo).
+   */
+  private async validarComunidadeDentroDoEscopoDeAtualizacao(id: number) {
+    const updateScope = accessibleBy(
+      this.abilityService.ability,
+      'update',
+    ).comunidade;
+
+    const comunidadeNoEscopo = await this.prisma.comunidade.findFirst({
+      where: { AND: [{ id }, updateScope] },
+    });
+
+    if (!comunidadeNoEscopo) {
+      await this.prisma.comunidade.findUniqueOrThrow({ where: { id } });
+      throw new ForbiddenException(
+        'Você não tem permissão para atualizar comunidade fora das suas paróquias.',
+      );
+    }
+
+    return comunidadeNoEscopo;
+  }
+
+  /**
+   * Projeta a condição de escopo de `comunidade` (relação to-one `comunidade.paroquia`)
+   * para o modelo `paroquia`, para validar a paróquia alvo no cadastro.
+   * `@casl/prisma` agrupa a regra condicional em um array `OR`; perfis sem condição
+   * (ex.: ADMIN) resultam em `{}`.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private condicaoEscopoDeParoquia(
+    scopeComunidade: Prisma.comunidadeWhereInput,
+  ): Prisma.paroquiaWhereInput {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const condicao: any = Array.isArray(scopeComunidade.OR)
+      ? scopeComunidade.OR[0]
+      : scopeComunidade;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vinculos = condicao?.paroquia?.is
+      ?.usuarioParoquias as Prisma.UsuarioParoquiaListRelationFilter;
+
+    return vinculos ? { usuarioParoquias: vinculos } : {};
   }
 }
