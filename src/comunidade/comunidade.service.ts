@@ -238,7 +238,7 @@ export class ComunidadeService extends BaseService {
    * `@casl/prisma` agrupa a regra condicional em um array `OR`; perfis sem condição
    * (ex.: ADMIN) resultam em `{}`.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private condicaoEscopoDeParoquia(
     scopeComunidade: Prisma.comunidadeWhereInput,
   ): Prisma.paroquiaWhereInput {
@@ -247,7 +247,7 @@ export class ComunidadeService extends BaseService {
       ? scopeComunidade.OR[0]
       : scopeComunidade;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const vinculos = condicao?.paroquia?.is
       ?.usuarioParoquias as Prisma.UsuarioParoquiaListRelationFilter;
 

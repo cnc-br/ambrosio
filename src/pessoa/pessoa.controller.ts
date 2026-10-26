@@ -16,14 +16,17 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { SexoQueryParamDto } from './dto/sexo.dto.js';
 import { CreateCasalDto } from './dto/create-casal.dto.js';
+import { CreatePessoaContatoDto } from './dto/create-pessoa-contato.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { CasalService } from './casal/casal.service.js';
+import { ContatoService } from './contato/contato.service.js';
 
 @ApiTags('Pessoas')
 @UseGuards(AuthGuard, RoleGuard)
@@ -32,6 +35,7 @@ export class PessoaController {
   constructor(
     private readonly pessoaService: PessoaService,
     private readonly casalService: CasalService,
+    private readonly contatoService: ContatoService,
   ) {}
 
   @Post()
@@ -86,6 +90,33 @@ export class PessoaController {
   })
   createCasal(@Body() createCasalDto: CreateCasalDto) {
     return this.casalService.createCasal(createCasalDto);
+  }
+
+  @Post('/:id/contato')
+  @ApiCreatedResponse({ description: 'Contato criado com sucesso.' })
+  @ApiBadRequestResponse({ description: 'Payload inválido' })
+  @ApiNotFoundResponse({ description: 'Pessoa não encontrada' })
+  @ApiBody({
+    description: 'Dados para criação de um contato da pessoa',
+    examples: {
+      contato: {
+        summary: 'Contato padrão',
+        value: {
+          telefoneResidencial: '1122334455',
+          telefoneCelular: '11987654321',
+          email: 'contato@exemplo.com',
+          observacao: 'Contato principal',
+          ativo: true,
+          contatoPrincipal: true,
+        },
+      },
+    },
+  })
+  createContato(
+    @Param('id') id: string,
+    @Body() createPessoaContatoDto: CreatePessoaContatoDto,
+  ) {
+    return this.contatoService.create(+id, createPessoaContatoDto);
   }
 
   @Get()

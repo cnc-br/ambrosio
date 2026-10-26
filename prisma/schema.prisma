@@ -144,6 +144,7 @@ model pessoaContato {
   observacao          String?
   ativo               Boolean @default(true)
   email               String?
+  contatoPrincipal    Boolean @default(false)
   pessoaId            Int
   pessoa              pessoa  @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
 }

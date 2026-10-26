@@ -9,6 +9,7 @@ import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.j
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { CasalService } from './casal/casal.service.js';
+import { ContatoService } from './contato/contato.service.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { ParoquiaService } from 'src/paroquia/paroquia.service.js';
 import { HistoricoService } from 'src/comunidade/historico/historico.service.js';
@@ -30,6 +31,8 @@ describe('PessoaController', () => {
   let saoPedroPessoaService: SaoPedroPessoaService;
   let jwtService: JwtService;
   let abilityService: CaslAbilityService;
+
+  const contatoServiceMock = { create: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -90,6 +93,10 @@ describe('PessoaController', () => {
               .mockResolvedValue({ id: 1, nome: 'João' }),
           },
         },
+        {
+          provide: ContatoService,
+          useValue: contatoServiceMock,
+        },
       ],
     }).compile();
 
@@ -117,5 +124,15 @@ describe('PessoaController', () => {
     expect(jwtService).toBeDefined();
     expect(abilityService).toBeDefined();
     expect(saoPedroPessoaService).toBeDefined();
+  });
+
+  it('deve delegar a criação de contato para o ContatoService', async () => {
+    const dto = { email: 'contato@exemplo.com' };
+    contatoServiceMock.create.mockResolvedValue({ id: 1, pessoaId: 1, ...dto });
+
+    const result = await controller.createContato('1', dto);
+
+    expect(contatoServiceMock.create).toHaveBeenCalledWith(1, dto);
+    expect(result).toEqual({ id: 1, pessoaId: 1, ...dto });
   });
 });

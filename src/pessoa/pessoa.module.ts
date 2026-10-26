@@ -8,10 +8,11 @@ import { SituacaoReligiosaModule } from 'src/configuracoes/situacao-religiosa/si
 import { SaoPedroModule } from 'src/external/sao-pedro/sao-pedro.module.js';
 import { ComunidadeModule } from 'src/comunidade/comunidade.module.js';
 import { CasalService } from './casal/casal.service.js';
+import { ContatoService } from './contato/contato.service.js';
 
 @Module({
   controllers: [PessoaController],
-  providers: [PessoaService, CasalService],
+  providers: [PessoaService, CasalService, ContatoService],
   exports: [PessoaService],
   imports: [
     EscolaridadeModule,
