@@ -9,6 +9,7 @@ import { SaoPedroAuthService } from 'src/external/sao-pedro/sao-pedro-auth.servi
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { JwtService } from '@nestjs/jwt';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 
 describe('CarismaController', () => {
   let controller: CarismaController;
@@ -24,6 +25,7 @@ describe('CarismaController', () => {
         SituacaoReligiosaService,
         SaoPedroAuthService,
         SaoPedroPessoaService,
+        SaoPedroContatoService,
         JwtService
       ],
       imports: [HttpModule],

@@ -9,6 +9,9 @@ import { EstadoCivilService } from 'src/configuracoes/estado-civil/estado-civil.
 import { EscolaridadeService } from 'src/configuracoes/escolaridade/escolaridade.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
+import { HttpModule } from '@nestjs/axios';
+import { SaoPedroAuthService } from 'src/external/sao-pedro/sao-pedro-auth.service.js';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -21,6 +24,7 @@ describe('UsersController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
+      imports: [HttpModule],
       providers: [
         UsersService,
         PrismaService,
@@ -29,6 +33,8 @@ describe('UsersController', () => {
         PessoaService,
         EstadoCivilService,
         EscolaridadeService,
+        SaoPedroContatoService,
+        SaoPedroAuthService,
         SituacaoReligiosaService,
         {
           provide: SaoPedroPessoaService,
