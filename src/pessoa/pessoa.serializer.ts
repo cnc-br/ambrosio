@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Comunidade, Pessoa } from 'neocatecumenal';
+import { Comunidade, Pessoa, PessoaContato } from 'neocatecumenal';
 import { ESTADO_CIVIL_MAP, SEXO_ENUM } from 'src/commons/enums/enums.js';
 import { serializeEndereco } from 'src/commons/utils/serializers/serializerEndereco.js';
 
@@ -7,6 +7,7 @@ export function serializePessoaResponse(
   pessoa: any,
   external: Pessoa,
   conjugue?: any,
+  contatos?: PessoaContato[],
 ): Pessoa {
   const comunidade = pessoa.comunidadePessoas?.[0] || null;
 
@@ -21,6 +22,7 @@ export function serializePessoaResponse(
     estadoCivil: ESTADO_CIVIL_MAP[external.estadoCivil],
     dataNascimento: external.dataNascimento,
     conjugue,
+    contatos,
     comunidade: handleComunidade(comunidade),
     foto: external.foto,
     ativo: pessoa.ativo,

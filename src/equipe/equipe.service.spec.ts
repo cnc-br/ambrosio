@@ -8,6 +8,7 @@ import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.s
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { SaoPedroAuthService } from 'src/external/sao-pedro/sao-pedro-auth.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 
 describe('EquipeService', () => {
   let service: EquipeService;
@@ -24,6 +25,7 @@ describe('EquipeService', () => {
         PessoaService,
         SaoPedroPessoaService,
         SaoPedroAuthService,
+        SaoPedroContatoService,
         SituacaoReligiosaService,
       ],
       imports: [HttpModule],

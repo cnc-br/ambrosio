@@ -26,6 +26,13 @@ describe('UserController (e2e)', () => {
     ]);
     prisma = app.get(PrismaService);
 
+    // Remove resíduos de execuções anteriores (o banco não é resetado em runs
+    // avulsos do vitest), garantindo que a suíte comece limpa: o usuário criado
+    // pelo teste de criação com sucesso e o do teste de exclusão.
+    await prisma.user.deleteMany({
+      where: { email: { in: [email, 'usuario-delete@admin.com'] } },
+    });
+
     const response = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: 'admin@admin.com', password: 'admin' });
