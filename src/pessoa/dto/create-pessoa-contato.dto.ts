@@ -1,30 +1,30 @@
 import {
   IsBoolean,
   IsEmail,
+  IsEnum,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
+import { TIPO_TELEFONE_ENUM } from 'src/commons/enums/enums.js';
 
 export class CreatePessoaContatoDto {
   @IsOptional()
-  @IsString()
-  telefoneResidencial?: string;
+  @IsEnum(TIPO_TELEFONE_ENUM)
+  tipoTelefone?: TIPO_TELEFONE_ENUM;
 
   @IsOptional()
   @IsString()
-  telefoneCelular?: string;
-
-  @IsOptional()
-  @IsString()
-  observacao?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  ativo?: boolean;
+  @MaxLength(20)
+  telefone?: string;
 
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  observacao?: string;
 
   @IsOptional()
   @IsBoolean()

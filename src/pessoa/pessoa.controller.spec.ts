@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 import { CasalService } from './casal/casal.service.js';
 import { ContatoService } from './contato/contato.service.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
@@ -94,6 +95,13 @@ describe('PessoaController', () => {
           },
         },
         {
+          provide: SaoPedroContatoService,
+          useValue: {
+            createExternalContato: vi.fn(),
+            findExternalContatos: vi.fn().mockResolvedValue([]),
+          },
+        },
+        {
           provide: ContatoService,
           useValue: contatoServiceMock,
         },
@@ -128,11 +136,19 @@ describe('PessoaController', () => {
 
   it('deve delegar a criação de contato para o ContatoService', async () => {
     const dto = { email: 'contato@exemplo.com' };
-    contatoServiceMock.create.mockResolvedValue({ id: 1, pessoaId: 1, ...dto });
+    const contato = {
+      id: 1,
+      pessoaId: 1,
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
+      email: 'contato@exemplo.com',
+      contatoPrincipal: true,
+    };
+    contatoServiceMock.create.mockResolvedValue(contato);
 
     const result = await controller.createContato('1', dto);
 
     expect(contatoServiceMock.create).toHaveBeenCalledWith(1, dto);
-    expect(result).toEqual({ id: 1, pessoaId: 1, ...dto });
+    expect(result).toEqual(contato);
   });
 });

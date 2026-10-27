@@ -3,15 +3,18 @@ import request from 'supertest';
 import { setupTestModule } from '../test-setup.js';
 import { pessoaMock } from '../mocks/pessoa-mock.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
-import { mockSaoPedroPessoaService } from '../mocks/sao-pedro-api-mock.js';
-import { PrismaService } from 'src/prisma.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
+import {
+  mockSaoPedroPessoaService,
+  mockSaoPedroContatoService,
+} from '../mocks/sao-pedro-api-mock.js';
 
 describe('PessoaContatoController (e2e)', () => {
   let app: INestApplication;
-  let prisma: PrismaService;
   const principal = 'pessoa';
   let token = '';
   let pessoaId = 0;
+  let pessoaUuid = '';
 
   beforeAll(async () => {
     app = await setupTestModule([
@@ -19,8 +22,11 @@ describe('PessoaContatoController (e2e)', () => {
         provider: SaoPedroPessoaService,
         value: mockSaoPedroPessoaService,
       },
+      {
+        provider: SaoPedroContatoService,
+        value: mockSaoPedroContatoService,
+      },
     ]);
-    prisma = app.get(PrismaService);
 
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
@@ -53,16 +59,24 @@ describe('PessoaContatoController (e2e)', () => {
       .send({ ...pessoaMock });
 
     pessoaId = pessoaResponse.body.data.id;
+    pessoaUuid = pessoaResponse.body.data.externalId;
+
+    // Limpa o histórico de chamadas acumuladas durante o setup
+    vi.clearAllMocks();
   });
 
   afterAll(async () => {
     await app.close();
   });
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it(`/${principal}/:id/contato (POST) - 401 | nao pode criar contato se nao tiver autenticado`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}/${pessoaId}/contato`)
-      .send({ telefoneCelular: '11999999999' })
+      .send({ telefone: '11999999999' })
       .expect(401)
       .expect((res) => {
         expect(res.body.message).toBe('Invalid or missing token');
@@ -81,7 +95,7 @@ describe('PessoaContatoController (e2e)', () => {
     return request(app.getHttpServer())
       .post(`/${principal}/${pessoaId}/contato`)
       .set('Authorization', `Bearer ${noPermissionToken}`)
-      .send({ telefoneCelular: '11999999999' })
+      .send({ telefone: '11999999999' })
       .expect(403)
       .expect((res) => {
         expect(res.body.message).toBe(
@@ -92,18 +106,16 @@ describe('PessoaContatoController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id/contato (POST) - 404 | nao pode criar contato para pessoa inexistente`, () => {
-    return request(app.getHttpServer())
+  it(`/${principal}/:id/contato (POST) - 404 | nao pode criar contato para pessoa inexistente`, async () => {
+    const response = await request(app.getHttpServer())
       .post(`/${principal}/999999/contato`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ telefoneCelular: '11999999999' })
-      .expect(404)
-      .expect((res) => {
-        expect(res.body.message).toBe(
-          `O registro de 'Pessoa' não foi encontrado.`,
-        );
-        expect(res.body.statusCode).toBe(404);
-      });
+      .send({ telefone: '11999999999' });
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe(`O registro de 'Pessoa' não foi encontrado.`);
+    expect(response.body.statusCode).toBe(404);
+    expect(mockSaoPedroContatoService.createExternalContato).not.toHaveBeenCalled();
   });
 
   it(`/${principal}/:id/contato (POST) - 400 | nao pode criar contato com email invalido`, () => {
@@ -115,6 +127,19 @@ describe('PessoaContatoController (e2e)', () => {
       .expect((res) => {
         expect(res.body.error).toBe('Bad Request');
         expect(res.body.statusCode).toBe(400);
+      });
+  });
+
+  it(`/${principal}/:id/contato (POST) - 400 | nao pode criar contato com tipoTelefone fora do enum`, () => {
+    return request(app.getHttpServer())
+      .post(`/${principal}/${pessoaId}/contato`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipoTelefone: 'FAX' })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.error).toBe('Bad Request');
+        expect(res.body.statusCode).toBe(400);
+        expect(JSON.stringify(res.body.message)).toContain('tipoTelefone');
       });
   });
 
@@ -130,52 +155,91 @@ describe('PessoaContatoController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id/contato (POST) - 201 | deve criar contato com todos os campos`, async () => {
+  it(`/${principal}/:id/contato (POST) - 201 | deve criar contato com todos os campos via Sao Pedro`, async () => {
+    const payload = {
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
+      email: 'contato@exemplo.com',
+      observacao: 'Contato principal',
+      contatoPrincipal: false,
+    };
+    const contatoCriado = {
+      id: 500,
+      pessoaId: 999,
+      ...payload,
+    };
+
+    mockSaoPedroContatoService.createExternalContato.mockResolvedValue(
+      contatoCriado,
+    );
+
     const response = await request(app.getHttpServer())
       .post(`/${principal}/${pessoaId}/contato`)
       .set('Authorization', `Bearer ${token}`)
-      .send({
-        telefoneResidencial: '1122334455',
-        telefoneCelular: '11987654321',
-        email: 'contato@exemplo.com',
-        observacao: 'Contato principal',
-        ativo: true,
-        contatoPrincipal: false,
-      });
+      .send(payload);
 
     expect(response.status).toBe(201);
-    expect(response.body.data).toHaveProperty('pessoaId', pessoaId);
-    expect(response.body.data).toHaveProperty(
-      'telefoneResidencial',
-      '1122334455',
-    );
-    expect(response.body.data).toHaveProperty(
-      'telefoneCelular',
-      '11987654321',
-    );
-    expect(response.body.data).toHaveProperty('email', 'contato@exemplo.com');
-    expect(response.body.data).toHaveProperty('observacao', 'Contato principal');
-    expect(response.body.data).toHaveProperty('ativo', true);
-    expect(response.body.data).toHaveProperty('contatoPrincipal', false);
+    expect(response.body.data).toEqual(contatoCriado);
+    expect(
+      mockSaoPedroContatoService.createExternalContato,
+    ).toHaveBeenCalledWith(pessoaUuid, payload);
   });
 
-  it(`/${principal}/:id/contato (POST) - 201 | deve criar contato so com campos opcionais aplicando defaults`, async () => {
+  it(`/${principal}/:id/contato (POST) - 201 | contato sem contatoPrincipal usa o default da Sao Pedro`, async () => {
+    const payload = { tipoTelefone: 'CELULAR', telefone: '11987654321' };
+    const contatoCriado = {
+      id: 501,
+      pessoaId: 999,
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
+      contatoPrincipal: true,
+    };
+
+    mockSaoPedroContatoService.createExternalContato.mockResolvedValue(
+      contatoCriado,
+    );
+
     const response = await request(app.getHttpServer())
       .post(`/${principal}/${pessoaId}/contato`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ telefoneCelular: '11987654321' });
+      .send(payload);
 
     expect(response.status).toBe(201);
-    expect(response.body.data).toHaveProperty('pessoaId', pessoaId);
-    expect(response.body.data).toHaveProperty('ativo', true);
-    expect(response.body.data).toHaveProperty('contatoPrincipal', false);
+    expect(response.body.data).toEqual(contatoCriado);
+    // campo ausente não é enviado à São Pedro (default aplicado por ela)
+    expect(
+      mockSaoPedroContatoService.createExternalContato,
+    ).toHaveBeenCalledWith(pessoaUuid, payload);
+    expect(payload).not.toHaveProperty('contatoPrincipal');
   });
 
-  it(`/${principal}/:id/contato (POST) - 201 | deve rebaixar o contato principal anterior ao criar novo principal`, async () => {
+  it(`/${principal}/:id/contato (POST) - 201 | principal unico delegado a Sao Pedro (rebaixamento simulado pelo mock)`, async () => {
+    const primeiroPayload = {
+      email: 'primeiro@exemplo.com',
+      contatoPrincipal: true,
+    };
+    const segundoPayload = {
+      email: 'segundo@exemplo.com',
+      contatoPrincipal: true,
+    };
+
+    mockSaoPedroContatoService.createExternalContato.mockResolvedValueOnce({
+      id: 601,
+      pessoaId: 999,
+      email: 'primeiro@exemplo.com',
+      contatoPrincipal: true,
+    });
+    mockSaoPedroContatoService.createExternalContato.mockResolvedValueOnce({
+      id: 602,
+      pessoaId: 999,
+      email: 'segundo@exemplo.com',
+      contatoPrincipal: true,
+    });
+
     const primeiro = await request(app.getHttpServer())
       .post(`/${principal}/${pessoaId}/contato`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ email: 'primeiro@exemplo.com', contatoPrincipal: true });
+      .send(primeiroPayload);
 
     expect(primeiro.status).toBe(201);
     expect(primeiro.body.data).toHaveProperty('contatoPrincipal', true);
@@ -183,24 +247,21 @@ describe('PessoaContatoController (e2e)', () => {
     const segundo = await request(app.getHttpServer())
       .post(`/${principal}/${pessoaId}/contato`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ email: 'segundo@exemplo.com', contatoPrincipal: true });
+      .send(segundoPayload);
 
     expect(segundo.status).toBe(201);
     expect(segundo.body.data).toHaveProperty('contatoPrincipal', true);
 
-    const contatos = await prisma.pessoaContato.findMany({
-      where: { pessoaId },
-    });
-    const principais = contatos.filter(
-      (contato) => contato.contatoPrincipal === true,
+    // os dois envios chegam à São Pedro com contatoPrincipal true
+    expect(mockSaoPedroContatoService.createExternalContato).toHaveBeenNthCalledWith(
+      1,
+      pessoaUuid,
+      primeiroPayload,
     );
-
-    expect(principais).toHaveLength(1);
-    expect(principais[0].email).toBe('segundo@exemplo.com');
-
-    const primeiroPersistido = contatos.find(
-      (contato) => contato.email === 'primeiro@exemplo.com',
+    expect(mockSaoPedroContatoService.createExternalContato).toHaveBeenNthCalledWith(
+      2,
+      pessoaUuid,
+      segundoPayload,
     );
-    expect(primeiroPersistido.contatoPrincipal).toBe(false);
   });
 });

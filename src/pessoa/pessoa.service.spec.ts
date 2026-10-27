@@ -4,26 +4,71 @@ import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 
 describe('PessoaService', () => {
   let service: PessoaService;
   let prismaService: PrismaService;
   let situacaoReligiosaService: SituacaoReligiosaService;
   let saoPedroPessoaService: SaoPedroPessoaService;
+  let saoPedroContatoService: SaoPedroContatoService;
   let abilityService: CaslAbilityService;
 
+  const saoPedroContatoServiceMock = {
+    findExternalContatos: vi.fn(),
+    createExternalContato: vi.fn(),
+  };
+  const saoPedroPessoaServiceMock = {
+    findAllPessoas: vi.fn().mockResolvedValue([]),
+    getExternalPessoaByCpf: vi.fn(),
+    findExternalPessoaByUuid: vi.fn(),
+    createExternalPessoa: vi.fn(),
+    updateExternalPessoa: vi.fn(),
+  };
+  const prismaMock = {
+    create: vi.fn(),
+    findFirstOrThrow: vi.fn(),
+    pessoa: {
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      findMany: vi.fn(),
+    },
+  };
+
+  const externalPessoa = {
+    id: 999,
+    externalId: 'uuid-externo',
+    nome: 'Maria Silva',
+    conhecidoPor: 'Maria',
+    cpf: '12345678901',
+    sexo: 'F',
+    nacionalidade: 'brasileira',
+    dataNascimento: new Date('1990-01-01'),
+    foto: null,
+    ativo: true,
+    estadoCivil: 'SOLTEIRO',
+    escolaridade: 'ANALFABETO',
+    situacaoReligiosa: { id: 1, descricao: 'LEIGO' },
+  };
+
+  const pessoaLocal = {
+    id: 1,
+    externalId: 'uuid-externo',
+    ativo: true,
+    situacaoReligiosa: { id: 1, descricao: 'LEIGO' },
+    pessoaCarismas: [],
+    enderecos: [],
+    comunidadePessoas: [],
+  };
+
   beforeEach(async () => {
+    vi.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PessoaService,
         CaslAbilityService,
-        {
-          provide: PrismaService,
-          useValue: {
-            create: vi.fn(),
-            findFirstOrThrow: vi.fn(),
-          },
-        },
+        { provide: PrismaService, useValue: prismaMock },
         {
           provide: SituacaoReligiosaService,
           useValue: {
@@ -36,12 +81,11 @@ describe('PessoaService', () => {
         },
         {
           provide: SaoPedroPessoaService,
-          useValue: {
-            getPessoas: vi.fn().mockResolvedValue([]),
-            postExternalPessoa: vi
-              .fn()
-              .mockResolvedValue({ id: 1, nome: 'João' }),
-          },
+          useValue: saoPedroPessoaServiceMock,
+        },
+        {
+          provide: SaoPedroContatoService,
+          useValue: saoPedroContatoServiceMock,
         },
       ],
     }).compile();
@@ -50,6 +94,9 @@ describe('PessoaService', () => {
     prismaService = module.get<PrismaService>(PrismaService);
     saoPedroPessoaService = module.get<SaoPedroPessoaService>(
       SaoPedroPessoaService,
+    );
+    saoPedroContatoService = module.get<SaoPedroContatoService>(
+      SaoPedroContatoService,
     );
     situacaoReligiosaService = module.get<SituacaoReligiosaService>(
       SituacaoReligiosaService,
@@ -64,5 +111,45 @@ describe('PessoaService', () => {
     expect(situacaoReligiosaService).toBeDefined();
     expect(abilityService).toBeDefined();
     expect(saoPedroPessoaService).toBeDefined();
+    expect(saoPedroContatoService).toBeDefined();
+  });
+
+  it('findOneByCpf deve incluir os contatos buscados na Sao Pedro', async () => {
+    const contatos = [
+      {
+        id: 1,
+        pessoaId: 999,
+        tipoTelefone: 'CELULAR',
+        telefone: '11987654321',
+        contatoPrincipal: true,
+      },
+    ];
+
+    saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
+      externalPessoa,
+    );
+    prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
+    saoPedroContatoServiceMock.findExternalContatos.mockResolvedValue(contatos);
+
+    const result = await service.findOneByCpf('12345678901');
+
+    expect(saoPedroContatoServiceMock.findExternalContatos).toHaveBeenCalledWith(
+      'uuid-externo',
+    );
+    expect(result.contatos).toEqual(contatos);
+  });
+
+  it('findOneByCpf deve retornar contatos vazio quando a busca falha', async () => {
+    saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
+      externalPessoa,
+    );
+    prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
+    saoPedroContatoServiceMock.findExternalContatos.mockRejectedValue(
+      new Error('falha externa'),
+    );
+
+    const result = await service.findOneByCpf('12345678901');
+
+    expect(result.contatos).toEqual([]);
   });
 });

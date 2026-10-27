@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { HttpException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { SaoPedroAuthService } from './sao-pedro-auth.service.js';
 import { CreatePessoaDto } from 'src/pessoa/dto/create-pessoa.dto.js';
 import { Pessoa } from 'neocatecumenal';
@@ -26,52 +26,10 @@ export class SaoPedroPessoaService extends BaseService {
     super(abilityService);
   }
 
-  /**
-   * Método centralizado para fazer requisições autenticadas com retry automático
-   */
-  private async executeAuthenticatedRequest<T>(
-    requestFn: (token: string) => Promise<T>,
-    operation: string,
-  ): Promise<T> {
-    try {
-      // Primeira tentativa com token válido
-      const token = await this.authService.getValidToken();
-      return await requestFn(token);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      // Se erro 401, tenta renovar token e repetir
-      if (error.response?.status === 401) {
-        this.logger.warn(`Token inválido durante ${operation}. Renovando...`);
-
-        try {
-          const newToken = await this.authService.handleAuthError();
-          return await requestFn(newToken);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (retryError: any) {
-          this.logger.error(
-            `Falha em ${operation} após renovação de token:`,
-            retryError.message,
-          );
-          throw new HttpException(
-            `Erro ao executar ${operation}`,
-            retryError.response?.status || 500,
-          );
-        }
-      }
-
-      // Para outros erros, propaga diretamente
-      this.logger.error(`Erro em ${operation}:`, error.message);
-      throw new HttpException(
-        `Erro ao executar ${operation}`,
-        error.response?.status || 500,
-      );
-    }
-  }
-
   async findAllPessoas(limit: number = 5000): Promise<Pessoa[]> {
     this.logger.log(`Buscando todas as pessoas externas (limit: ${limit})`);
 
-    return this.executeAuthenticatedRequest(async (token: string) => {
+    return this.authService.executeAuthenticatedRequest(async (token: string) => {
       const response = await firstValueFrom(
         this.httpService.get(
           `${process.env.SAO_PEDRO_API_URL}/api/pessoas?limit=${limit}`,
@@ -103,7 +61,7 @@ export class SaoPedroPessoaService extends BaseService {
 
     this.logger.log(`Buscando pessoas externas com parâmetros: ${queryString}`);
 
-    return this.executeAuthenticatedRequest(async (token: string) => {
+    return this.authService.executeAuthenticatedRequest(async (token: string) => {
       const response = await firstValueFrom(
         this.httpService.get(
           `${process.env.SAO_PEDRO_API_URL}/api/pessoas/?${queryString}`,
@@ -158,7 +116,7 @@ export class SaoPedroPessoaService extends BaseService {
       `Criando pessoa externa: ${payload.nome} (CPF: ${payload.cpf})`,
     );
 
-    return this.executeAuthenticatedRequest(async (token: string) => {
+    return this.authService.executeAuthenticatedRequest(async (token: string) => {
       const response = await firstValueFrom(
         this.httpService.post(
           `${process.env.SAO_PEDRO_API_URL}/api/pessoas/`,
@@ -186,7 +144,7 @@ export class SaoPedroPessoaService extends BaseService {
     const payload = UpdatePessoaMapper.toExternal(updatePessoaDto);
     this.logger.log(`Atualizando pessoa externa UUID: ${uuid}`);
 
-    return this.executeAuthenticatedRequest(async (token: string) => {
+    return this.authService.executeAuthenticatedRequest(async (token: string) => {
       const response = await firstValueFrom(
         this.httpService.patch(
           `${process.env.SAO_PEDRO_API_URL}/api/pessoas/${uuid}/`,

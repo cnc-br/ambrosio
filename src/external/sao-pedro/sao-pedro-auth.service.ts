@@ -1,5 +1,10 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 
 interface AuthResponse {
@@ -113,5 +118,47 @@ export class SaoPedroAuthService {
     this.refreshToken = null;
     this.tokenExpiryTime = null;
     this.logger.log('Tokens limpos');
+  }
+
+  /**
+   * Método centralizado para fazer requisições autenticadas com retry automático
+   */
+  async executeAuthenticatedRequest<T>(
+    requestFn: (token: string) => Promise<T>,
+    operation: string,
+  ): Promise<T> {
+    try {
+      // Primeira tentativa com token válido
+      const token = await this.getValidToken();
+      return await requestFn(token);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      // Se erro 401, tenta renovar token e repetir
+      if (error.response?.status === 401) {
+        this.logger.warn(`Token inválido durante ${operation}. Renovando...`);
+
+        try {
+          const newToken = await this.handleAuthError();
+          return await requestFn(newToken);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (retryError: any) {
+          this.logger.error(
+            `Falha em ${operation} após renovação de token:`,
+            retryError.message,
+          );
+          throw new HttpException(
+            `Erro ao executar ${operation}`,
+            retryError.response?.status || 500,
+          );
+        }
+      }
+
+      // Para outros erros, propaga diretamente
+      this.logger.error(`Erro em ${operation}:`, error.message);
+      throw new HttpException(
+        `Erro ao executar ${operation}`,
+        error.response?.status || 500,
+      );
+    }
   }
 }

@@ -63,3 +63,8 @@ export const mockSaoPedroPessoaService = {
   }),
   updateExternalPessoa: vi.fn().mockResolvedValue({}),
 };
+
+export const mockSaoPedroContatoService = {
+  createExternalContato: vi.fn(),
+  findExternalContatos: vi.fn().mockResolvedValue([]),
+};

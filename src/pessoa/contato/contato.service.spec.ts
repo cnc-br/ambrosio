@@ -3,38 +3,50 @@ import { ForbiddenException } from '@nestjs/common';
 import { ContatoService } from './contato.service.js';
 import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 import { CreatePessoaContatoDto } from '../dto/create-pessoa-contato.dto.js';
 
 describe('ContatoService', () => {
   let service: ContatoService;
 
-  const tx = {
-    pessoa: { findUniqueOrThrow: vi.fn() },
-    pessoaContato: { updateMany: vi.fn(), create: vi.fn() },
-  };
   const prismaMock = {
-    $transaction: vi.fn(async (fn: (client: typeof tx) => unknown) =>
-      fn(tx),
-    ),
+    pessoa: { findUniqueOrThrow: vi.fn() },
+  };
+  const saoPedroContatoServiceMock = {
+    createExternalContato: vi.fn(),
   };
   const abilityMock = {
     ability: { can: vi.fn() },
+  };
+
+  const contatoCriado = {
+    id: 1,
+    pessoaId: 10,
+    tipoTelefone: 'CELULAR',
+    telefone: '11987654321',
+    email: 'contato@exemplo.com',
+    contatoPrincipal: true,
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
     abilityMock.ability.can.mockReturnValue(true);
-    tx.pessoa.findUniqueOrThrow.mockResolvedValue({ id: 1 });
-    tx.pessoaContato.create.mockImplementation(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ({ data }: { data: Record<string, any> }) => ({ id: 1, ...data }),
+    prismaMock.pessoa.findUniqueOrThrow.mockResolvedValue({
+      externalId: 'uuid-pessoa',
+    });
+    saoPedroContatoServiceMock.createExternalContato.mockResolvedValue(
+      contatoCriado,
     );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContatoService,
         { provide: PrismaService, useValue: prismaMock },
+        {
+          provide: SaoPedroContatoService,
+          useValue: saoPedroContatoServiceMock,
+        },
         { provide: CaslAbilityService, useValue: abilityMock },
       ],
     }).compile();
@@ -50,70 +62,47 @@ describe('ContatoService', () => {
     abilityMock.ability.can.mockReturnValue(false);
 
     await expect(
-      service.create(1, { telefoneCelular: '11999999999' }),
+      service.create(1, { telefone: '11999999999' }),
     ).rejects.toThrow(ForbiddenException);
 
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).not.toHaveBeenCalled();
   });
 
-  it('deve criar contato sem contatoPrincipal sem chamar updateMany', async () => {
+  it('deve resolver a pessoa pelo id e delegar a criação à São Pedro com o externalId', async () => {
     const dto: CreatePessoaContatoDto = {
-      telefoneCelular: '11999999999',
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
       email: 'contato@exemplo.com',
     };
 
     const result = await service.create(1, dto);
 
-    expect(tx.pessoa.findUniqueOrThrow).toHaveBeenCalledWith({
+    expect(prismaMock.pessoa.findUniqueOrThrow).toHaveBeenCalledWith({
       where: { id: 1 },
+      select: { externalId: true },
     });
-    expect(tx.pessoaContato.updateMany).not.toHaveBeenCalled();
-    expect(tx.pessoaContato.create).toHaveBeenCalledWith({
-      data: { pessoaId: 1, ...dto },
-    });
-    expect(result).toEqual({ id: 1, pessoaId: 1, ...dto });
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).toHaveBeenCalledWith('uuid-pessoa', dto);
+    expect(result).toEqual(contatoCriado);
   });
 
-  it('deve rebaixar o principal anterior quando contatoPrincipal é true', async () => {
-    const dto: CreatePessoaContatoDto = {
-      email: 'principal@exemplo.com',
-      contatoPrincipal: true,
-    };
-
-    const result = await service.create(1, dto);
-
-    expect(tx.pessoaContato.updateMany).toHaveBeenCalledWith({
-      where: { pessoaId: 1, contatoPrincipal: true },
-      data: { contatoPrincipal: false },
-    });
-    expect(tx.pessoaContato.create).toHaveBeenCalledWith({
-      data: { pessoaId: 1, ...dto },
-    });
-    expect(result).toEqual({ id: 1, pessoaId: 1, ...dto });
-  });
-
-  it('deve executar updateMany antes do create na transação', async () => {
-    await service.create(1, { contatoPrincipal: true });
-
-    const updateManyOrder = tx.pessoaContato.updateMany.mock
-      .invocationCallOrder[0];
-    const createOrder = tx.pessoaContato.create.mock.invocationCallOrder[0];
-
-    expect(updateManyOrder).toBeLessThan(createOrder);
-  });
-
-  it('deve propagar erro de pessoa inexistente (P2025) sem criar contato', async () => {
+  it('deve propagar erro de pessoa inexistente (P2025) sem chamar o serviço externo', async () => {
     const notFoundError = Object.assign(
       new Error('O registro de Pessoa não foi encontrado.'),
       { code: 'P2025' },
     );
-    tx.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
+    prismaMock.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
 
     await expect(
-      service.create(999, { telefoneCelular: '11999999999' }),
+      service.create(999, { telefone: '11999999999' }),
     ).rejects.toBe(notFoundError);
 
-    expect(tx.pessoaContato.updateMany).not.toHaveBeenCalled();
-    expect(tx.pessoaContato.create).not.toHaveBeenCalled();
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).not.toHaveBeenCalled();
   });
 });

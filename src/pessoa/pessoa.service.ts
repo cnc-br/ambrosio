@@ -9,10 +9,11 @@ import { SEXO_ENUM } from 'src/commons/enums/enums.js';
 import { LIMIT_DEFAULT, PAGE_DEFAULT } from 'src/commons/constants/constants.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { accessibleBy } from '@casl/prisma';
-import { Pessoa, PessoaConjugue } from 'neocatecumenal';
+import { Pessoa, PessoaConjugue, PessoaContato } from 'neocatecumenal';
 import { pessoa } from 'src/prisma/generated-client.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
+import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { serializePessoaResponse } from './pessoa.serializer.js';
 import { ENDERECO_INCLUDE, PESSOA_CARISMA_INCLUDE } from 'src/prisma/includes.js';
@@ -24,6 +25,7 @@ export class PessoaService extends BaseService {
     private prisma: PrismaService,
     private situacaoReligiosaService: SituacaoReligiosaService,
     private readonly saoPedroPessoaService: SaoPedroPessoaService,
+    private readonly saoPedroContatoService: SaoPedroContatoService,
     abilityService: CaslAbilityService,
   ) {
     super(abilityService);
@@ -94,12 +96,31 @@ export class PessoaService extends BaseService {
       externalPessoas.map((ep) => [ep.externalId, ep]),
     );
 
+    // Busca os contatos externos das pessoas da página (paralelo); falha
+    // isolada não derruba a listagem — a pessoa retorna com contatos vazio
+    const contatosMap = new Map<string, PessoaContato[]>();
+    await Promise.all(
+      results
+        .filter((pessoa) => externalMap.has(pessoa.externalId))
+        .map(async (pessoa) => {
+          contatosMap.set(
+            pessoa.externalId,
+            await this.fetchExternalContatos(pessoa.externalId),
+          );
+        }),
+    );
+
     return results
       .map((pessoa) => {
         const externalPessoa = externalMap.get(pessoa.externalId);
 
         if (externalPessoa) {
-          return serializePessoaResponse(pessoa, externalPessoa, undefined);
+          return serializePessoaResponse(
+            pessoa,
+            externalPessoa,
+            undefined,
+            contatosMap.get(pessoa.externalId),
+          );
         } else {
           this.logger.warn(
             `Pessoa com ID ${pessoa.id} não encontrada na API externa (externalId: ${pessoa.externalId})`,
@@ -121,7 +142,12 @@ export class PessoaService extends BaseService {
     const pessoa = await this.prisma.pessoa.findUnique({
       where: { externalId: externalPessoa.externalId },
     });
-    return pessoa ? serializePessoaResponse(pessoa, externalPessoa) : null;
+    if (!pessoa) {
+      return null;
+    }
+
+    const contatos = await this.fetchExternalContatos(pessoa.externalId);
+    return serializePessoaResponse(pessoa, externalPessoa, undefined, contatos);
   }
 
   async findOne(id: number): Promise<Pessoa> {
@@ -166,7 +192,8 @@ export class PessoaService extends BaseService {
       pessoa.id,
       externalPessoa.sexo === 'M' ? SEXO_ENUM.MASCULINO : SEXO_ENUM.FEMININO,
     );
-    return serializePessoaResponse(pessoa, externalPessoa, conjugue);
+    const contatos = await this.fetchExternalContatos(pessoa.externalId);
+    return serializePessoaResponse(pessoa, externalPessoa, conjugue, contatos);
   }
 
   async update(id: number, updatePessoaDto: UpdatePessoaDto): Promise<Pessoa> {
@@ -194,6 +221,19 @@ export class PessoaService extends BaseService {
       updatePessoaDto,
     );
     return pessoa;
+  }
+
+  private async fetchExternalContatos(
+    pessoaUuid: string,
+  ): Promise<PessoaContato[]> {
+    try {
+      return await this.saoPedroContatoService.findExternalContatos(pessoaUuid);
+    } catch {
+      this.logger.warn(
+        `Não foi possível buscar os contatos da pessoa externalId: ${pessoaUuid}`,
+      );
+      return [];
+    }
   }
 
   private async getConjugue(

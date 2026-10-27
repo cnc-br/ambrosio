@@ -102,11 +102,10 @@ export class PessoaController {
       contato: {
         summary: 'Contato padrão',
         value: {
-          telefoneResidencial: '1122334455',
-          telefoneCelular: '11987654321',
+          tipoTelefone: 'CELULAR',
+          telefone: '11987654321',
           email: 'contato@exemplo.com',
           observacao: 'Contato principal',
-          ativo: true,
           contatoPrincipal: true,
         },
       },
