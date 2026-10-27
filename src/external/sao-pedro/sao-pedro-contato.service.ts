@@ -7,6 +7,10 @@ import { CreatePessoaContatoDto } from 'src/pessoa/dto/create-pessoa-contato.dto
 import { BaseService } from 'src/commons/base.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { CreateContatoMapper } from './mapper/create-contato.mapper.js';
+import {
+  ContatoResponseMapper,
+  ExternalContatoResponse,
+} from './mapper/contato-response.mapper.js';
 
 @Injectable()
 export class SaoPedroContatoService extends BaseService {
@@ -27,7 +31,7 @@ export class SaoPedroContatoService extends BaseService {
 
     return this.authService.executeAuthenticatedRequest(async (token: string) => {
       const response = await firstValueFrom(
-        this.httpService.post<PessoaContato>(
+        this.httpService.post<ExternalContatoResponse>(
           `${process.env.SAO_PEDRO_API_URL}/api/pessoas/${pessoaUuid}/contatos/`,
           payload,
           {
@@ -43,7 +47,7 @@ export class SaoPedroContatoService extends BaseService {
         `Contato externo criado com sucesso - pessoa UUID: ${pessoaUuid}`,
       );
 
-      return response.data;
+      return ContatoResponseMapper.toDomain(response.data);
     }, `criação de contato externo (pessoa UUID: ${pessoaUuid})`);
   }
 
@@ -65,7 +69,7 @@ export class SaoPedroContatoService extends BaseService {
         `${contatos.length} contatos externos encontrados para pessoa UUID: ${pessoaUuid}`,
       );
 
-      return contatos;
+      return ContatoResponseMapper.toDomainList(contatos);
     }, `busca de contatos externos (pessoa UUID: ${pessoaUuid})`);
   }
 }

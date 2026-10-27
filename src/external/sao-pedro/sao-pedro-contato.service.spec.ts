@@ -5,6 +5,7 @@ import { PessoaContato } from 'neocatecumenal';
 import { SaoPedroContatoService } from './sao-pedro-contato.service.js';
 import { SaoPedroAuthService } from './sao-pedro-auth.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
+import { ExternalContatoResponse } from './mapper/contato-response.mapper.js';
 
 describe('SaoPedroContatoService', () => {
   let service: SaoPedroContatoService;
@@ -42,14 +43,14 @@ describe('SaoPedroContatoService', () => {
     expect(service).toBeDefined();
   });
 
-  it('deve enviar o contato para a rota de contatos da pessoa e retornar response.data', async () => {
-    const created: PessoaContato = {
+  it('deve enviar o contato para a rota de contatos da pessoa em snake_case e retornar response.data normalizado', async () => {
+    const created: ExternalContatoResponse = {
       id: 1,
-      pessoaId: 2,
-      tipoTelefone: 'CELULAR',
+      pessoa_id: 2,
+      tipo_telefone: 'CELULAR',
       telefone: '11987654321',
       email: 'contato@exemplo.com',
-      contatoPrincipal: true,
+      contato_principal: true,
     };
     httpServiceMock.post.mockReturnValue(of({ data: created }));
 
@@ -63,10 +64,10 @@ describe('SaoPedroContatoService', () => {
     expect(httpServiceMock.post).toHaveBeenCalledWith(
       `${process.env.SAO_PEDRO_API_URL}/api/pessoas/uuid-pessoa/contatos/`,
       {
-        tipoTelefone: 'CELULAR',
+        tipo_telefone: 'CELULAR',
         telefone: '11987654321',
         email: 'contato@exemplo.com',
-        contatoPrincipal: true,
+        contato_principal: true,
       },
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -75,14 +76,21 @@ describe('SaoPedroContatoService', () => {
         }),
       }),
     );
-    expect(result).toEqual(created);
+    expect(result).toEqual({
+      id: 1,
+      pessoaId: 2,
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
+      email: 'contato@exemplo.com',
+      contatoPrincipal: true,
+    });
   });
 
   it('deve omitir contatoPrincipal ausente do payload enviado', async () => {
     httpServiceMock.post.mockReturnValue(
       of({
-        data: { id: 1, pessoaId: 2, contatoPrincipal: true },
-      } as { data: PessoaContato }),
+        data: { id: 1, pessoa_id: 2, contato_principal: true },
+      } as { data: ExternalContatoResponse }),
     );
 
     await service.createExternalContato('uuid-pessoa', {
@@ -92,19 +100,19 @@ describe('SaoPedroContatoService', () => {
 
     expect(httpServiceMock.post).toHaveBeenCalledWith(
       expect.stringContaining('/api/pessoas/uuid-pessoa/contatos/'),
-      { tipoTelefone: 'RESIDENCIAL', telefone: '1122334455' },
+      { tipo_telefone: 'RESIDENCIAL', telefone: '1122334455' },
       expect.anything(),
     );
   });
 
-  it('deve buscar os contatos da pessoa (resposta com envelope data)', async () => {
-    const contatos: PessoaContato[] = [
+  it('deve buscar os contatos da pessoa (resposta com envelope data) e devolver em camelCase', async () => {
+    const contatos: ExternalContatoResponse[] = [
       {
         id: 1,
-        pessoaId: 2,
-        tipoTelefone: 'CELULAR',
+        pessoa_id: 2,
+        tipo_telefone: 'CELULAR',
         telefone: '11987654321',
-        contatoPrincipal: true,
+        contato_principal: true,
       },
     ];
     httpServiceMock.get = vi
@@ -121,18 +129,38 @@ describe('SaoPedroContatoService', () => {
         }),
       }),
     );
-    expect(result).toEqual(contatos);
+    expect(result).toEqual([
+      {
+        id: 1,
+        pessoaId: 2,
+        tipoTelefone: 'CELULAR',
+        telefone: '11987654321',
+        contatoPrincipal: true,
+      } satisfies PessoaContato,
+    ]);
   });
 
-  it('deve buscar os contatos da pessoa (resposta como array direto)', async () => {
-    const contatos: PessoaContato[] = [
-      { id: 1, pessoaId: 2, tipoTelefone: 'CELULAR', contatoPrincipal: false },
+  it('deve buscar os contatos da pessoa (resposta como array direto) e devolver em camelCase', async () => {
+    const contatos: ExternalContatoResponse[] = [
+      {
+        id: 1,
+        pessoa_id: 2,
+        tipo_telefone: 'CELULAR',
+        contato_principal: false,
+      },
     ];
     httpServiceMock.get = vi.fn().mockReturnValue(of({ data: contatos }));
 
     const result = await service.findExternalContatos('uuid-pessoa');
 
-    expect(result).toEqual(contatos);
+    expect(result).toEqual([
+      {
+        id: 1,
+        pessoaId: 2,
+        tipoTelefone: 'CELULAR',
+        contatoPrincipal: false,
+      } satisfies PessoaContato,
+    ]);
   });
 
   it('deve retornar array vazio quando a resposta nao tem contatos', async () => {

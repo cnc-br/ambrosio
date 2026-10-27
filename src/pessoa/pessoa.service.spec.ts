@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserRoleEnum } from 'neocatecumenal';
 import { PessoaService } from './pessoa.service.js';
 import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
@@ -151,5 +152,24 @@ describe('PessoaService', () => {
     const result = await service.findOneByCpf('12345678901');
 
     expect(result.contatos).toEqual([]);
+  });
+
+  it('findAll nao busca contatos e omite o campo contatos na listagem', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).abilityService.createForUser({
+      id: 1,
+      role: UserRoleEnum.ADMIN,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+
+    saoPedroPessoaServiceMock.findAllPessoas.mockResolvedValue([externalPessoa]);
+    prismaMock.pessoa.findMany.mockResolvedValue([pessoaLocal]);
+
+    const result = await service.findAll(1, 1);
+
+    expect(
+      saoPedroContatoServiceMock.findExternalContatos,
+    ).toHaveBeenCalledTimes(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].contatos).toBeUndefined();
   });
 });

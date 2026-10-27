@@ -96,31 +96,12 @@ export class PessoaService extends BaseService {
       externalPessoas.map((ep) => [ep.externalId, ep]),
     );
 
-    // Busca os contatos externos das pessoas da página (paralelo); falha
-    // isolada não derruba a listagem — a pessoa retorna com contatos vazio
-    const contatosMap = new Map<string, PessoaContato[]>();
-    await Promise.all(
-      results
-        .filter((pessoa) => externalMap.has(pessoa.externalId))
-        .map(async (pessoa) => {
-          contatosMap.set(
-            pessoa.externalId,
-            await this.fetchExternalContatos(pessoa.externalId),
-          );
-        }),
-    );
-
     return results
       .map((pessoa) => {
         const externalPessoa = externalMap.get(pessoa.externalId);
 
         if (externalPessoa) {
-          return serializePessoaResponse(
-            pessoa,
-            externalPessoa,
-            undefined,
-            contatosMap.get(pessoa.externalId),
-          );
+          return serializePessoaResponse(pessoa, externalPessoa, undefined);
         } else {
           this.logger.warn(
             `Pessoa com ID ${pessoa.id} não encontrada na API externa (externalId: ${pessoa.externalId})`,

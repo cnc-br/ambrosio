@@ -82,6 +82,25 @@ describe('PessoaCreateController (e2e)', () => {
     vi
       .spyOn(mockSaoPedroPessoaService, 'getExternalPessoaByCpf')
       .mockResolvedValueOnce(null);
+    // externalId único por execução: evita colisão de @unique (externalId)
+    // com linhas de execuções anteriores quando o banco não é resetado
+    vi.spyOn(mockSaoPedroPessoaService, 'createExternalPessoa').mockResolvedValue(
+      {
+        id: 999,
+        externalId: `e2e-pessoa-${Date.now()}`,
+        nome: 'Carmem Hernandez Mock',
+        cpf: pessoaMock.cpf,
+        estadoCivil: 'SOLTEIRO',
+        situacaoReligiosa: pessoaMock.situacaoReligiosa,
+        escolaridade: 'ANALFABETO',
+        nacionalidade: 'espanhol',
+        sexo: 'FEMININO',
+        conhecidoPor: 'Carminha',
+        foto: null,
+        ativo: true,
+        dataNascimento: new Date('1932-02-23'),
+      },
+    );
     const response = await request(app.getHttpServer())
       .post(`/${principal}`)
       .set('Authorization', `Bearer ${token}`)

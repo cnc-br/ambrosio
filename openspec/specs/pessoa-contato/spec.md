@@ -66,22 +66,42 @@ O sistema SHALL validar o payload de `POST /pessoa/:id/contato` e responder 400 
 - **WHEN** o payload contém um campo com tipo inválido, por exemplo `contatoPrincipal` como texto em vez de booleano
 - **THEN** o sistema responde 400 com `error` `Bad Request`, `statusCode` 400 e a mensagem de validação do campo informado
 
-### Requirement: Contatos incluídos na leitura de pessoa
+### Requirement: Contatos incluídos nas leituras individuais de pessoa
 
-O sistema SHALL incluir os contatos da pessoa (`tipoTelefone`, `telefone`, `email`, `observacao`, `contatoPrincipal`) na leitura de pessoa — `GET /pessoa`, `GET /pessoa/:id` e `GET /pessoa?cpf=` —, obtidos da API São Pedro, no mesmo nível que os `enderecos`. Quando a pessoa não possui contatos, o sistema SHALL retornar um array vazio; na listagem, uma falha ao buscar os contatos de uma pessoa não impede a resposta (a pessoa retorna com `contatos` vazio).
-
-#### Scenario: Listagem devolve os contatos de cada pessoa
-- **WHEN** um usuário autenticado chama `GET /pessoa` e a São Pedro retorna contatos para uma pessoa da listagem
-- **THEN** a resposta inclui o campo `contatos` com os contatos da pessoa no mesmo nível de `enderecos`
-
-#### Scenario: Pessoa sem contatos
-- **WHEN** um usuário autenticado chama `GET /pessoa` (ou `GET /pessoa/:id`) e a pessoa não possui contatos na São Pedro
-- **THEN** a resposta inclui `contatos` como um array vazio
-
-#### Scenario: Listagem tolerante a falha na busca de contatos
-- **WHEN** a busca de contatos de uma pessoa na São Pedro falha durante `GET /pessoa`
-- **THEN** a listagem continua respondendo 200 e a pessoa afetada retorna com `contatos` como array vazio
+O sistema SHALL incluir os contatos da pessoa (`tipoTelefone`, `telefone`, `email`, `observacao`, `contatoPrincipal`), obtidos da API São Pedro, no mesmo nível que os `enderecos`, nas leituras individuais de pessoa — `GET /pessoa/:id` e `GET /pessoa?cpf=` (e leitura por `externalId`) —, retornando array vazio quando a pessoa não possui contatos e tolerando falha na busca (a leitura segue respondendo 200 com `contatos` vazio). A listagem `GET /pessoa` SHALL NOT incluir o campo `contatos`.
 
 #### Scenario: Detalhe por id inclui os contatos
 - **WHEN** um usuário autenticado chama `GET /pessoa/:id` e a São Pedro retorna contatos para a pessoa
+- **THEN** a resposta inclui o campo `contatos` com os contatos da pessoa no mesmo nível de `enderecos`
+
+#### Scenario: Detalhe por cpf inclui os contatos
+- **WHEN** um usuário autenticado chama `GET /pessoa?cpf=` e a São Pedro retorna contatos para a pessoa
 - **THEN** a resposta inclui o campo `contatos` com os contatos da pessoa
+
+#### Scenario: Pessoa sem contatos
+- **WHEN** um usuário autenticado chama `GET /pessoa/:id` (ou `GET /pessoa?cpf=`) e a pessoa não possui contatos na São Pedro
+- **THEN** a resposta inclui `contatos` como um array vazio
+
+#### Scenario: Leitura individual tolerante a falha na busca de contatos
+- **WHEN** a busca de contatos de uma pessoa na São Pedro falha durante `GET /pessoa/:id` (ou `GET /pessoa?cpf=`)
+- **THEN** a leitura continua respondendo 200 e a pessoa retorna com `contatos` como array vazio
+
+#### Scenario: Listagem não inclui os contatos
+- **WHEN** um usuário autenticado chama `GET /pessoa` e a São Pedro possui contatos para uma pessoa da listagem
+- **THEN** a resposta não inclui o campo `contatos` nos itens da listagem, independentemente de a São Pedro possuir contatos para a pessoa
+
+### Requirement: Contatos serializados em camelCase nas respostas
+
+O sistema SHALL retornar os contatos nas respostas da API ambrosio em camelCase, conforme a interface `PessoaContato` — `id`, `pessoaId`, `tipoTelefone`, `telefone`, `email`, `observacao`, `contatoPrincipal` —, tanto nas leituras individuais de pessoa (`GET /pessoa/:id`, `GET /pessoa?cpf=` e leitura por `externalId`) quanto na criação de contato (`POST /pessoa/:id/contato`), independentemente de a API São Pedro trafegar os dados em snake_case.
+
+#### Scenario: Detalhe por id retorna os contatos em camelCase
+- **WHEN** um usuário autenticado chama `GET /pessoa/:id` e a São Pedro retorna contatos com campos em snake_case (`pessoa_id`, `tipo_telefone`, `contato_principal`)
+- **THEN** a resposta inclui o campo `contatos` com os campos em camelCase (`pessoaId`, `tipoTelefone`, `contatoPrincipal`)
+
+#### Scenario: Detalhe por cpf retorna os contatos em camelCase
+- **WHEN** um usuário autenticado chama `GET /pessoa?cpf=` e a São Pedro retorna contatos com campos em snake_case
+- **THEN** a resposta inclui o campo `contatos` com os campos em camelCase conforme a interface `PessoaContato`
+
+#### Scenario: Criação de contato retorna o contato criado em camelCase
+- **WHEN** um usuário autenticado chama `POST /pessoa/:id/contato` e a São Pedro retorna o contato criado com campos em snake_case
+- **THEN** a resposta 201 inclui o contato criado com os campos em camelCase conforme a interface `PessoaContato`, mesmo que o envio à São Pedro seja em snake_case
