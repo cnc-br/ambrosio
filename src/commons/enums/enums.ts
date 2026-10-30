@@ -49,4 +49,5 @@ export const ESTADO_CIVIL_MAP: Record<string, EstadoCivilEnum> = {
   C: EstadoCivilEnum.CASADO,
   D: EstadoCivilEnum.DIVORCIADO,
   V: EstadoCivilEnum.VIUVO,
+  N: EstadoCivilEnum.NAO_INFORMADO,
 };

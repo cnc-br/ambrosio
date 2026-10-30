@@ -1,7 +1,6 @@
 import 'dotenv/config';
 
 import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
 import { PrismaClient, Sexo, tipoCarismaEnum } from '../generated/client.js';
 import { seedCidade } from './data/seed/cidade.js';
 import { seedDiocese } from './data/seed/diocese.js';
@@ -458,6 +457,7 @@ async function main() {
       'CASADO(A)',
       'VIUVO(A)',
       'DIVORCIADO(A)',
+      'NÃO INFORMADO',
     ];
 
     for (const descricao of estadosCivis) {

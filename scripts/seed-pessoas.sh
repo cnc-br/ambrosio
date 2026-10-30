@@ -112,7 +112,7 @@ echo "2. Cadastrando ${QUANTIDADE_PESSOAS} pessoas..."
 NOMES=("Ana" "Amanda" "Aline" "Bruno" "Carlos" "Daniela" "Eduardo" "Fernanda" "Gabriel" "Helena" "Igor" "Leonardo" "Fabiano" "Orley" "Vitoria" "Cloves" "Jéssica" "Tomas" "Guilherme" "Joana" "Lucas" "Mariana" "Nicolas" "Patrícia" "Rafael" "Sabrina" "Tiago" "Vanessa" "William" "Yasmin" "Adriana" "Beatriz" "Camila" "Diego" "Elisa" "Felipe" "Giovana" "Henrique" "Isabela" "João" "Karina" "Leandro" "Marcelo" "Natália" "Otávio" "Paula" "Rodrigo" "Simone" "Thiago" "Úrsula" "Vinicius" "Wagner" "Xavier" "Yara" "Zilda" "André" "Bruna" "Cesar" "Débora" "Emerson" "Flávia" "Gustavo" "Heloísa" "Ivan" "Juliana" "Kauê" "Larissa" "Márcio" "Nilton" "Olívia" "Pedro" "Raquel" "Samuel" "Tatiana" "Valdirene" "Wesley" "Ximena" "Yuri" "Zenaide" "Alessandra")
 SOBRENOMES=("Lutfala" "Peres" "Lamborin" "Ramon" "Pedrito" "Augusto" "Liberato" "Fausto" "Almeida" "Barros" "Cardoso" "Duarte" "Esteves" "Ferreira" "Gomes" "Hernandes" "Ibrahim" "Jesus" "Klein" "Lima" "Martins" "Nogueira" "Oliveira" "Pereira" "Queiroz" "Ramos" "Silva" "Teixeira" "Uchoa" "Vieira" "Zanetti" "Cintra" "Faleiros" "Azevedo" "Barbosa" "Camargo" "Dias" "Evangelista" "Fonseca" "Guimarães" "Horta" "Inez" "Junqueira" "Kowalski" "Lopes" "Machado" "Neves" "Ornelas" "Pinto" "Quintana" "Ribeiro" "Santos" "Toledo" "Urbano" "Vargas" "Weber" "Xavier" "Yamamoto" "Zago" "Aguiar" "Borges" "Castro" "Domingues" "Espinosa" "Franco" "Galvão" "Henriques" "Ivo" "Jardim" "Kurtz" "Lacerda" "Mendes" "Nascimento" "Otoni" "Pacheco" "Quental" "Rocha" "Sampaio" "Tavares" "Ulhoa" "Vasconcelos" "Werneck" "Xavier")
 APELIDOS=("Bia" "Léo" "Nina" "Dani" "Dudu" "Gabi" "Zé" "Mari" "Rafa" "Tico" "Nando" "Bel" "Tata" "Gui" "Isa" "Luca" "Duda" "Teca" "Nico" "Vivi" "Caco" "Lili" "Neto" "Guga" "Fafá" "Kiko" "Beto" "Cris" "Lele" "Manu" "Titi" "Zeca" "Juju" "Didi" "Lalá" "Cacá" "Nanda" "Lulu" "Guto" "Fefe" "Lolo" "Mimi" "Toto" "Naná" "Gigi" "Babi" "Cida" "Dedé" "Lelê" "Mazé" "Netinho" "Paty" "Rê" "Sisi" "Tetê" "Vavá" "Xuxu" "Zezé" "Chico" "Dinho" "Fabi" "Gaúcho" "Ique" "Joca" "Keka" "Lala" "Mara" "Nino" "Pepê" "Quica")
-ESTADOS_CIVIS=("SOLTEIRO" "CASADO" "DIVORCIADO" "VIUVO")
+ESTADOS_CIVIS=("SOLTEIRO" "CASADO" "DIVORCIADO" "VIUVO" "NAO_INFORMADO")
 ESCOLARIDADES=("nao_informado" "analfabeto" "fundamental" "fundamental_incompleto" "medio" "medio_incompleto" "superior" "superior_incompleto" "pos_graduacao" "mestrado" "doutorado" "pos_doutorado")
 
 
@@ -158,6 +158,7 @@ EOF
 )
 
   RESPONSE=$(wget --no-check-certificate --quiet \
+    --content-on-error \
     --method POST \
     --timeout=0 \
     --header "Authorization: Bearer ${TOKEN}" \

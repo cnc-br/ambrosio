@@ -12,7 +12,7 @@ export class CreatePessoaMapper {
       sexo: createPessoaDto.sexo === SEXO_ENUM.MASCULINO ? 'M' : 'F',
       dataNascimento: createPessoaDto.dataNascimento,
       estadoCivil:
-        createPessoaDto.estadoCivil.substring(0, 1).toUpperCase() || 'S',
+        createPessoaDto.estadoCivil.substring(0, 1).toUpperCase() || 'N',
       escolaridade: createPessoaDto.escolaridade,
       foto: createPessoaDto.foto || null,
       ativo: true,
