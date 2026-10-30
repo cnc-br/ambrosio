@@ -5,9 +5,16 @@ import { setupTestModule } from '../test-setup.js';
 describe('EstadoCivilController (e2e)', () => {
   let app: INestApplication;
   const principal = 'estado-civil';
+  let token = '';
 
   beforeAll(async () => {
     app = await setupTestModule();
+
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'admin@admin.com', password: 'admin' });
+
+    token = response.body.data.access_token;
   });
 
   afterAll(async () => {
@@ -17,6 +24,7 @@ describe('EstadoCivilController (e2e)', () => {
   it(`/${principal} (GET) - 200 | deve retornar os estados civis`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
+      .set('Authorization', `Bearer ${token}`)
       .expect(200)
       .expect((res) => {
         expect(res.body).toBeInstanceOf(Object);
@@ -28,6 +36,7 @@ describe('EstadoCivilController (e2e)', () => {
   it(`/${principal}/:id (GET) - 200 | deve retornar o estado civil by id`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}/2`)
+      .set('Authorization', `Bearer ${token}`)
       .expect(200)
       .expect((res) => {
         expect(res.body.data).not.toBeInstanceOf(Array);
@@ -37,14 +46,16 @@ describe('EstadoCivilController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) - 404 | cadastro de estado civil não é permitido`, () => {
+  it(`/${principal} (POST) - 400 | nao deve cadastrar estado civil com payload invalido`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
-      .expect(404)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ descricao: 123 })
+      .expect(400)
       .expect((res) => {
-        expect(res.body.message).toBe(`Cannot POST /${principal}`);
-        expect(res.body.error).toBe('Not Found');
-        expect(res.body.statusCode).toBe(404);
+        expect(res.body.message).toContain('descricao must be a string');
+        expect(res.body.error).toBe('Bad Request');
+        expect(res.body.statusCode).toBe(400);
       });
   });
 
@@ -84,6 +95,7 @@ describe('EstadoCivilController (e2e)', () => {
   it(`/${principal}/:id (GET) - 404 | deve retornar estado civil nao encontrado by id`, async () => {
     return request(app.getHttpServer())
       .get(`/${principal}/23424`)
+      .set('Authorization', `Bearer ${token}`)
       .expect(404)
       .expect((res) => {
         expect(res.body.message).toBe(
