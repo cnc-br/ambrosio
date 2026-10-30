@@ -7,11 +7,12 @@ import {
   carisma,
   diocese,
   equipe,
+  estadoCivil,
+  etapa,
   localidade,
   paroquia,
   pessoa,
   user,
-  etapa,
 } from 'src/prisma/generated-client.js';
 
 export type PermActions = 'manage' | 'create' | 'read' | 'update' | 'delete';
@@ -27,6 +28,7 @@ export type PermissionResource =
       equipe: equipe;
       carisma: carisma;
       etapa: etapa;
+      estadoCivil: estadoCivil;
     }>
   | 'all';
 
@@ -44,6 +46,7 @@ export type DefinePermissions = (
 const grantReadPessoaDiocese: DefinePermissions = (user, { can }) => {
   can('read', 'pessoa');
   can('read', 'diocese');
+  can('read', 'estadoCivil');
 };
 
 const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
@@ -67,6 +70,7 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
   SECRETARIA_PAROQUIA: grantReadPessoaDiocese,
   SECRETARIA_CNC(user, { can }) {
     can('read', 'pessoa');
+    can('read', 'estadoCivil');
     can('read', 'diocese');
     can('read', 'localidade');
     can('read', 'paroquia', {

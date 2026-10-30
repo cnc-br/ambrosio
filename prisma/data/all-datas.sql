@@ -35,6 +35,7 @@ INSERT INTO ambrosio."estadoCivil" (id, descricao) VALUES(1, 'SOLTEIRO(A)');
 INSERT INTO ambrosio."estadoCivil" (id, descricao) VALUES(2, 'CASADO(A)');
 INSERT INTO ambrosio."estadoCivil" (id, descricao) VALUES(3, 'VIUVO(A)');
 INSERT INTO ambrosio."estadoCivil" (id, descricao) VALUES(4, 'DIVORCIADO(A)');
+INSERT INTO ambrosio."estadoCivil" (id, descricao) VALUES(5, 'NAO_INFORMADO');
 
 INSERT INTO ambrosio.etapa (id, descricao) VALUES(1, 'pre-catecumenato');
 INSERT INTO ambrosio.etapa (id, descricao) VALUES(2, '1º escrutinio');
