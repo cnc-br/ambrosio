@@ -398,6 +398,109 @@ describe('ParoquiaController (e2e)', () => {
     );
   });
 
+  it(`/${principal}/:id (PATCH) - 200 | deve atualizar o setor da paroquia quando informado`, async () => {
+    const paroquiaData = {
+      descricao: `Paroquia para atualizar setor ${Date.now()}`,
+      diocese: { id: 1 },
+      setor: { id: 1 },
+      endereco: {
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    };
+
+    const created = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send(paroquiaData)
+      .expect(201);
+
+    const paroquiaId = created.body.data.id;
+    const enderecoId = created.body.data.endereco.id;
+
+    const patchData = {
+      descricao: 'Paroquia com setor atualizado',
+      diocese: { id: 1 },
+      setor: { id: 2 },
+      endereco: {
+        id: enderecoId,
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    };
+
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/${paroquiaId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send(patchData)
+      .expect(200);
+
+    expect(response.body.data.id).toBe(paroquiaId);
+    expect(response.body.data.descricao).toBe(patchData.descricao);
+    expect(response.body.data.setor.id).toBe(2);
+  });
+
+  it(`/${principal}/:id (PATCH) - 200 | deve manter o setor atual quando setor nao informado`, async () => {
+    const paroquiaData = {
+      descricao: `Paroquia para manter setor ${Date.now()}`,
+      diocese: { id: 1 },
+      setor: { id: 1 },
+      endereco: {
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    };
+
+    const created = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send(paroquiaData)
+      .expect(201);
+
+    const paroquiaId = created.body.data.id;
+    const enderecoId = created.body.data.endereco.id;
+
+    const patchData = {
+      descricao: 'Paroquia sem setor no payload',
+      diocese: { id: 1 },
+      endereco: {
+        id: enderecoId,
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    };
+
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/${paroquiaId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send(patchData)
+      .expect(200);
+
+    expect(response.body.data.id).toBe(paroquiaId);
+    expect(response.body.data.descricao).toBe(patchData.descricao);
+    expect(response.body.data.setor.id).toBe(1);
+  });
+
   it(`/${principal} (PATCH) - 404 | não deve atualizar uma paroquia com id endereco que nao pertence a ela mesma`, async () => {
     const dioceseData = {
       descricao: faker.company.name(),
