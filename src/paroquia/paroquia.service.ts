@@ -127,7 +127,9 @@ export class ParoquiaService extends BaseService {
             descricao: updateParoquiaDto.descricao,
             enderecoId: endereco.id,
             dioceseId: updateParoquiaDto.diocese.id,
-            setorId: updateParoquiaDto.setor.id,
+            ...(updateParoquiaDto.setor && {
+              setorId: updateParoquiaDto.setor.id,
+            }),
           },
           select: PAROQUIA_SELECT,
           where: {
