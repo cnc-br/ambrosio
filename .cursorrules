@@ -1,0 +1,11 @@
+# Cursor Rules — Ambrosio (Backend NestJS CNC-Gestão)
+
+- Stack: NestJS, TypeScript, Prisma ORM, PostgreSQL 17, ElasticSearch 8, Vitest.
+- Governança Canônica: gestao-devsecops/specs/002-backend-ambrosio/SPEC.md.
+- Regras:
+  1. TDD Obrigatório: Escreva testes unitários (*.spec.ts) ou e2e (test/*.e2e-spec.ts) via Vitest antes de codificar lógica.
+  2. Multi-Schema: Schema 'ambrosio' no banco 'db_gestao' (definido em prisma/schema.prisma via @@schema("ambrosio")).
+  3. Migrations: Sempre via npx prisma migrate dev. Não execute DDL manual.
+  4. Validação: DTOs estritos com class-validator e class-transformer em todos os endpoints.
+  5. CASL: Autorizações via @casl/ability.
+  6. OpenSpec: Respeite o fluxo de propostas antes de implementar (opsx-propose / opsx-apply).

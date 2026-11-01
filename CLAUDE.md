@@ -6,9 +6,10 @@ Guia de contexto para agentes e desenvolvedores trabalharem nesta API. Escrito e
 
 Backend (API REST) da plataforma CNC — Santo Ambrósio, servindo o dashboard de https://apicncbrasil.cn.org.br.
 
-- **Stack**: NestJS (TypeScript, ESM), Prisma + PostgreSQL, JWT, CASL (autorização), Swagger, pino/ELK (logging), Vitest + Supertest (e2e).
-- **Porta**: `3005` (`src/main.ts`).
+- **Stack**: NestJS (TypeScript, ESM), Prisma + PostgreSQL 17, JWT, CASL (autorização), Swagger, pino/ELK (logging), Vitest + Supertest (e2e).
+- **Porta**: `3005` (`src/main.ts`) em produção / `3333` em dev local.
 - **Swagger**: disponível em `http://localhost:3005/api`.
+- **Banco de Dados (Multi-Schema)**: Opera exclusivamente dentro do schema `ambrosio` no banco unificado `db_gestao`.
 - **Dependência externa**: a API de pessoas (São Pedro) é externa; para cadastrar pessoas rode `bash ./scripts/start.sh` (ver README).
 
 ## Arquitetura e módulos
@@ -49,6 +50,7 @@ Convenção: controllers em `src/<modulo>/<modulo>.controller.ts` com `@Controll
 - **Paginação**: `PaginationInterceptor` (global) envolve respostas em `{ server, total, page, limit, data }` (default `page=1`, `limit=50`).
 - **Logging**: `LoggingInterceptor` + pino, com `requestId` rastreável por request; modo ELK grava logs JSON em arquivo (`ELK_ENABLED=true`, ver README).
 - **Swagger**: anotações `@ApiTags`/`@ApiResponse` nos controllers, montado em `/api`.
+- **OpenSpec**: Respeite os comandos em `.opencode/commands/` e a fronteira de planejamento (`opsx-propose` vs `opsx-apply`).
 
 ## Testes e2e
 
@@ -57,7 +59,7 @@ Fonte de verdade: spec `openspec/specs/testes-e2e/spec.md`. Exemplo canônico: `
 - **Formato do título** (pt-br): `` `/${principal} (MÉTODO) - <status> | <descrição>` ``, ex.: `` `/diocese (GET) - 401 | nao pode ver diocese se nao tiver autenticado` ``.
 - **Cobertura mínima por controller** (quando aplicável): sem autenticação → 401; autenticado sem permissão → 403; recurso não encontrado → 404; payload inválido → 400; leitura → 200; criação → 201; atualização → 200.
 - **Verificação de corpo**: para erros conferir `res.body.message`, `res.body.error` (quando aplicável) e `res.body.statusCode`; para sucesso, os campos obrigatórios do corpo.
-- **Setup padrão**: `setupTestModule()` de `test/test-setup.ts` (sobe o `AppModule` real com `ValidationPipe` e `PrismaExceptionsFilter`, sem mocks de banco), login `admin@admin.com` / `admin` no `beforeAll` para obter o token, constante `principal` com o nome base da rota, `afterAll` com `app.close()`.
+- **Setup padrão**: `setupTestModule()` de `test/test-setup.ts` (sobe o `AppModule` real com `ValidationPipe` e `PrismaExceptionsFilter`, sem mocks de banco), login `admin@admin.com` / `[REDACTED]` no `beforeAll` para obter o token, constante `principal` com o nome base da rota, `afterAll` com `app.close()`.
 - **Dados descartáveis**: `faker` em `pt_BR` (`@faker-js/faker/locale/pt_BR`).
 - **Execução**: `npm run test:e2e` (faz seed do banco e roda Vitest com `vitest.config.e2e.ts`).
 
