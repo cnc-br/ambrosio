@@ -22,11 +22,6 @@ export class CreateEtapaDto {
   dataInicio?: Date;
 
   @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  dataFim?: Date;
-
-  @IsOptional()
   @MaxLength(180)
   localConvivencia?: string;
 

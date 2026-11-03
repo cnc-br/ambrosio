@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateEtapaDto } from './dto/create-etapa.dto.js';
 import { UpdateEtapaDto } from './dto/update-etapa.dto.js';
 import { BaseService } from 'src/commons/base.service.js';
@@ -21,15 +21,12 @@ export class EtapaComunidadeService extends BaseService {
     this.validateCreateAbility('etapa');
     this.logger.log(`Creating etapa for comunidade ${comunidadeId}`);
 
-    this.validateDateRange(createEtapaDto.dataInicio, createEtapaDto.dataFim);
-
     const etapa = await this.prisma.comunidadeEtapa.create({
       data: {
         comunidadeId,
         etapaId: createEtapaDto.etapaId,
         equipeId: createEtapaDto.equipeId,
         dataInicio: createEtapaDto.dataInicio,
-        dataFim: createEtapaDto.dataFim,
         observacao: createEtapaDto.observacao,
         localConvivencia: createEtapaDto.localConvivencia,
       },
@@ -68,19 +65,6 @@ export class EtapaComunidadeService extends BaseService {
   async update(comunidadeId: number, id: number, dto: UpdateEtapaDto) {
     this.validateUpdateAbility('etapa');
 
-    const etapaAtual = await this.prisma.comunidadeEtapa.findFirstOrThrow({
-      where: { id, comunidadeId },
-      select: {
-        dataInicio: true,
-        dataFim: true,
-      },
-    });
-
-    this.validateDateRange(
-      dto.dataInicio === undefined ? etapaAtual?.dataInicio : dto.dataInicio,
-      dto.dataFim === undefined ? etapaAtual?.dataFim : dto.dataFim,
-    );
-
     return this.prisma.comunidadeEtapa.update({
       where: { id },
       data: {
@@ -88,7 +72,6 @@ export class EtapaComunidadeService extends BaseService {
         equipeId: dto.equipeId,
         localConvivencia: dto.localConvivencia,
         dataInicio: dto.dataInicio,
-        dataFim: dto.dataFim,
         observacao: dto.observacao,
       },
     });
@@ -107,18 +90,5 @@ export class EtapaComunidadeService extends BaseService {
     return this.prisma.comunidadeEtapa.delete({
       where: { id },
     });
-  }
-
-  private validateDateRange(
-    dataInicio?: Date | null,
-    dataFim?: Date | null,
-  ): void {
-    if (!dataInicio || !dataFim) {
-      return;
-    }
-
-    if (dataInicio >= dataFim) {
-      throw new BadRequestException('dataInicio deve ser menor que dataFim');
-    }
   }
 }
