@@ -19,17 +19,17 @@ export type PermActions = 'manage' | 'create' | 'read' | 'update' | 'delete';
 
 export type PermissionResource =
   | Subjects<{
-      pessoa: pessoa;
-      user: user;
-      diocese: diocese;
-      paroquia: paroquia;
-      localidade: localidade;
-      comunidade: comunidade;
-      equipe: equipe;
-      carisma: carisma;
-      etapa: etapa;
-      estadoCivil: estadoCivil;
-    }>
+    pessoa: pessoa;
+    user: user;
+    diocese: diocese;
+    paroquia: paroquia;
+    localidade: localidade;
+    comunidade: comunidade;
+    equipe: equipe;
+    carisma: carisma;
+    etapa: etapa;
+    estadoCivil: estadoCivil;
+  }>
   | 'all';
 
 export type AppAbility = PureAbility<
@@ -70,6 +70,8 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
   SECRETARIA_PAROQUIA: grantReadPessoaDiocese,
   SECRETARIA_CNC(user, { can }) {
     can('read', 'pessoa');
+    can('create', 'pessoa');
+    can('update', 'pessoa');
     can('read', 'estadoCivil');
     can('read', 'diocese');
     can('read', 'localidade');
