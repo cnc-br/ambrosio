@@ -69,6 +69,31 @@ describe('CaslAbilityService', () => {
     );
   });
 
+  it('permite que o SECRETARIA_CNC crie e atualize pessoa e mantenha a leitura', () => {
+    const user = {
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+    service.createForUser(user);
+
+    expect(service.ability.can('create', 'pessoa')).toBe(true);
+    expect(service.ability.can('update', 'pessoa')).toBe(true);
+    expect(service.ability.can('read', 'pessoa')).toBe(true);
+  });
+
+  it('não permite que o NAO_IDENTIFICADO crie ou atualize pessoa', () => {
+    const user = {
+      id: 'usuario-nao-identificado',
+      role: UserRoleEnum.NAO_IDENTIFICADO,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+    service.createForUser(user);
+
+    expect(service.ability.can('create', 'pessoa')).toBe(false);
+    expect(service.ability.can('update', 'pessoa')).toBe(false);
+  });
+
   it('não restringe a leitura de comunidades do ADMIN', () => {
     const user = {
       id: 'usuario-admin',

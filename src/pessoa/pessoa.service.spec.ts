@@ -154,6 +154,19 @@ describe('PessoaService', () => {
     expect(result.contatos).toEqual([]);
   });
 
+  it('update deve negar quando o usuário não tem permissão de atualização', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).abilityService.createForUser({
+      id: 'usuario-nao-identificado',
+      role: UserRoleEnum.NAO_IDENTIFICADO,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+
+    await expect(service.update(1, {})).rejects.toThrow(
+      'Você não tem permissão para update pessoa',
+    );
+    expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
   it('findAll nao busca contatos e omite o campo contatos na listagem', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (service as any).abilityService.createForUser({

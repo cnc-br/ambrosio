@@ -178,6 +178,8 @@ export class PessoaService extends BaseService {
   }
 
   async update(id: number, updatePessoaDto: UpdatePessoaDto): Promise<Pessoa> {
+    this.validateUpdateAbility('pessoa');
+
     const pessoa = await this.findOne(id);
 
     // TODO: implementar regra para alteração de estado civil e sexo caso a pessoa esteja casada, para evitar inconsistências no cadastro do casal
