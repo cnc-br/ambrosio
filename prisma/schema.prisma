@@ -302,7 +302,6 @@ model comunidadeEtapa {
   comunidadeId     Int
   etapaId          Int
   dataInicio       DateTime?
-  dataFim          DateTime?
   observacao       String?    @db.VarChar(250)
   createdAt        DateTime   @default(now())
   equipeId         Int?

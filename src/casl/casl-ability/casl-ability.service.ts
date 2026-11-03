@@ -73,6 +73,7 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
     can('create', 'pessoa');
     can('update', 'pessoa');
     can('read', 'estadoCivil');
+    can('read', 'carisma');
     can('read', 'diocese');
     can('read', 'localidade');
     can('read', 'paroquia', {
