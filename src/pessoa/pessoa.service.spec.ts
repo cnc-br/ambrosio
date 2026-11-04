@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRoleEnum } from 'neocatecumenal';
 import { PessoaService } from './pessoa.service.js';
@@ -113,6 +114,41 @@ describe('PessoaService', () => {
     expect(abilityService).toBeDefined();
     expect(saoPedroPessoaService).toBeDefined();
     expect(saoPedroContatoService).toBeDefined();
+  });
+
+  it('analisarCPF deve rejeitar CPF com dígitos verificadores inválidos', async () => {
+    await expect(service.analisarCPF('52998224724')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('analisarCPF deve rejeitar CPFs com todos os dígitos iguais', async () => {
+    await expect(service.analisarCPF('11111111111')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('analisarCPF deve aceitar um CPF válido', async () => {
+    await service.analisarCPF('52998224725');
+
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).toHaveBeenCalledWith('52998224725');
+  });
+
+  it('analisarCPF deve permitir CPF não informado', async () => {
+    await service.analisarCPF(undefined);
+    await service.analisarCPF('');
+
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).not.toHaveBeenCalled();
   });
 
   it('findOneByCpf deve incluir os contatos buscados na Sao Pedro', async () => {

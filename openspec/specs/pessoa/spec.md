@@ -18,6 +18,10 @@ O sistema SHALL permitir criar uma pessoa por meio de `POST /pessoa` com um payl
 - **WHEN** o payload informa uma `situacaoReligiosa` cujo id não existe
 - **THEN** o sistema responde 404 com `message` `O registro de 'SituacaoReligiosa' não foi encontrado.` e `statusCode` 404, sem criar a pessoa
 
+#### Scenario: Criação com CPF inválido
+- **WHEN** o payload informa um CPF com formato ou dígitos verificadores inválidos
+- **THEN** o sistema responde 400 sem consultar a pessoa na API externa nem criar a pessoa
+
 #### Scenario: Criação com CPF já cadastrado
 - **WHEN** o payload informa um `cpf` que já pertence a uma pessoa cadastrada
 - **THEN** o sistema responde 409 com a mensagem de CPF já registrado, sem criar a pessoa

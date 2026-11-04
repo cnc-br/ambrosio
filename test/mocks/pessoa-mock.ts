@@ -4,7 +4,7 @@ export const pessoaMock = {
   nome: faker.person.fullName(),
   conhecidoPor: faker.person.fullName(),
   nacionalidade: 'brasileira',
-  cpf: '07211100000',
+  cpf: '10000000019',
   sexo: faker.helpers.arrayElement(['MASCULINO', 'FEMININO']),
   dataNascimento: faker.date
     .birthdate({ min: 1950, max: 2010, mode: 'year' })
