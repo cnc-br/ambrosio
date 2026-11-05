@@ -262,8 +262,8 @@ export class PessoaService extends BaseService {
     };
   }
 
-  async analisarCPF(cpf?: string) {
-    if (cpf === undefined || cpf === '') {
+  async analisarCPF(cpf?: string | null) {
+    if (cpf === undefined || cpf === null || cpf === '') {
       this.logger.log('CPF não informado');
       return;
     }

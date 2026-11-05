@@ -192,6 +192,7 @@ export class ComunidadeService extends BaseService {
    * montando um mapa `externalId → { id, externalId, nome }`.
    */
   private async resolverNomesCarismas(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     comunidade: any,
   ): Promise<MapaPessoasExternas> {
     const externalIds = new Set<string>();
@@ -225,8 +226,7 @@ export class ComunidadeService extends BaseService {
           }
         } catch (error) {
           this.logger.warn(
-            `Não foi possível resolver nome externo da pessoa ${uuid} para carismas: ${
-              error instanceof Error ? error.message : String(error)
+            `Não foi possível resolver nome externo da pessoa ${uuid} para carismas: ${error instanceof Error ? error.message : String(error)
             }`,
           );
         }
@@ -322,7 +322,7 @@ export class ComunidadeService extends BaseService {
    * `@casl/prisma` agrupa a regra condicional em um array `OR`; perfis sem condição
    * (ex.: ADMIN) resultam em `{}`.
    */
-   
+
   private condicaoEscopoDeParoquia(
     scopeComunidade: Prisma.comunidadeWhereInput,
   ): Prisma.paroquiaWhereInput {
@@ -331,7 +331,7 @@ export class ComunidadeService extends BaseService {
       ? scopeComunidade.OR[0]
       : scopeComunidade;
 
-     
+
     const vinculos = condicao?.paroquia?.is
       ?.usuarioParoquias as Prisma.UsuarioParoquiaListRelationFilter;
 

@@ -145,6 +145,7 @@ describe('PessoaService', () => {
   it('analisarCPF deve permitir CPF não informado', async () => {
     await service.analisarCPF(undefined);
     await service.analisarCPF('');
+    await service.analisarCPF(null);
 
     expect(
       saoPedroPessoaServiceMock.getExternalPessoaByCpf,
