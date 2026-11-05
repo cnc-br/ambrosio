@@ -15,6 +15,7 @@ import { JwtService } from '@nestjs/jwt';
 import { EtapaComunidadeService } from './etapa/etapa-comunidade.service.js';
 import { HistoricoService } from './historico/historico.service.js';
 import { ComunidadeService } from './comunidade.service.js';
+import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 
 describe('ComunidadeController', () => {
   let controller: ComunidadeController;
@@ -41,6 +42,10 @@ describe('ComunidadeController', () => {
         EstadoService,
         PaisService,
         JwtService,
+        {
+          provide: SaoPedroPessoaService,
+          useValue: { findExternalPessoaByUuid: vi.fn() },
+        },
       ],
     }).compile();
 

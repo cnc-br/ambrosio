@@ -2,6 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { setupTestModule } from './test-setup.js';
 import { PrismaService } from 'src/prisma.service.js';
+import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
+import { mockSaoPedroPessoaService } from './mocks/sao-pedro-api-mock.js';
 
 const ADMIN_PASSWORD_HASH =
   '$2b$10$.TT7jgY.IqTW/3qg9RXw4.y20H4ROVqfj0TIjBi5l9ks2fb5ueQsC';
@@ -30,7 +32,12 @@ describe('ComunidadeController (e2e)', () => {
   };
 
   beforeAll(async () => {
-    app = await setupTestModule();
+    app = await setupTestModule([
+      {
+        provider: SaoPedroPessoaService,
+        value: mockSaoPedroPessoaService,
+      },
+    ]);
     prisma = app.get(PrismaService);
 
     const semParoquia = await prisma.user.upsert({
@@ -262,6 +269,32 @@ describe('ComunidadeController (e2e)', () => {
           `O registro de 'Comunidade' não foi encontrado.`,
         );
         expect(res.body.statusCode).toBe(404);
+      });
+  });
+
+  it(`/${principal}/:id (GET) - 200 | retorna carismas no findOne sem quebrar os demais campos`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: paroquiaDoUsuario },
+    });
+
+    expect(comunidade).toBeDefined();
+
+    return request(app.getHttpServer())
+      .get(`/${principal}/${comunidade.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.data).toHaveProperty('id', comunidade.id);
+        expect(res.body.data).toHaveProperty('numeroDaComunidade');
+        expect(res.body.data).toHaveProperty('quantidadeMembros');
+        // carismas é sempre um array (vazio quando a comunidade não tem pessoas com carisma)
+        expect(Array.isArray(res.body.data.carismas)).toBe(true);
+        for (const carisma of res.body.data.carismas) {
+          expect(carisma).toHaveProperty('id');
+          expect(carisma).toHaveProperty('descricao');
+          expect(carisma).toHaveProperty('tipo');
+          expect(Array.isArray(carisma.pessoas)).toBe(true);
+        }
       });
   });
 

@@ -13,6 +13,7 @@ import { EnderecoService } from 'src/endereco/endereco.service.js';
 import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { SetorService } from 'src/mapa/setor/setor.service.js';
 import { HttpModule } from '@nestjs/axios';
+import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 
 describe('EtapaService', () => {
   let service: EtapaComunidadeService;
@@ -35,7 +36,11 @@ describe('EtapaService', () => {
         HistoricoService,
         DioceseService,
         PaisService,
-        TipoDioceseService
+        TipoDioceseService,
+        {
+          provide: SaoPedroPessoaService,
+          useValue: { findExternalPessoaByUuid: vi.fn() },
+        },
       ],
     }).compile();
 

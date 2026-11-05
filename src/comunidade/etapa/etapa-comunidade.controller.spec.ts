@@ -15,6 +15,7 @@ import { CidadeService } from 'src/configuracoes/cidade/cidade.service.js';
 import { EstadoService } from 'src/configuracoes/estado/estado.service.js';
 import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { HttpModule } from '@nestjs/axios';
+import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 
 describe('EtapaController', () => {
   let controller: EtapaComunidadeController;
@@ -39,7 +40,11 @@ describe('EtapaController', () => {
         TipoDioceseService,
         CidadeService,
         EstadoService,
-        PaisService
+        PaisService,
+        {
+          provide: SaoPedroPessoaService,
+          useValue: { findExternalPessoaByUuid: vi.fn() },
+        },
       ],
     }).compile();
 
