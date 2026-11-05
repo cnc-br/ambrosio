@@ -21,7 +21,7 @@ import { ApiTags } from '@nestjs/swagger';
 @UseGuards(AuthGuard, RoleGuard)
 @Controller('comunidade/:comunidadeId/etapa')
 export class EtapaComunidadeController {
-  constructor(private readonly etapaService: EtapaComunidadeService) {}
+  constructor(private readonly etapaService: EtapaComunidadeService) { }
 
   @Post()
   create(
@@ -73,13 +73,6 @@ export class EtapaComunidadeController {
   @Patch(':id')
   update(
     @Param(
-      'comunidadeId',
-      new ParseIntPipe({
-        errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE,
-      }),
-    )
-    comunidadeId: number,
-    @Param(
       'id',
       new ParseIntPipe({
         errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE,
@@ -88,7 +81,7 @@ export class EtapaComunidadeController {
     id: number,
     @Body() updateEtapaDto: UpdateEtapaDto,
   ) {
-    return this.etapaService.update(comunidadeId, id, updateEtapaDto);
+    return this.etapaService.update(id, updateEtapaDto);
   }
 
   @Delete(':id')

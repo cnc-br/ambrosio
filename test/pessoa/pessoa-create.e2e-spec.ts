@@ -82,7 +82,7 @@ describe('PessoaCreateController (e2e)', () => {
     );
 
     // Fixture de pessoa para os casos de atualização
-    const cpfFixture = '07211100003';
+    const cpfFixture = '10000000108';
     vi.spyOn(
       mockSaoPedroPessoaService,
       'getExternalPessoaByCpf',
@@ -205,7 +205,7 @@ describe('PessoaCreateController (e2e)', () => {
   it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra pessoa`, async () => {
     const externalId = `e2e-pessoa-scnc-${Date.now()}`;
     const nome = 'Pessoa Secretaria CNC';
-    const cpf = '07211100001';
+    const cpf = '10000000280';
 
     vi.spyOn(
       mockSaoPedroPessoaService,
@@ -233,7 +233,7 @@ describe('PessoaCreateController (e2e)', () => {
   it(`/${principal} (POST) - 201 | SECRETARIA_CNC sem paroquia cadastra pessoa`, async () => {
     const externalId = `e2e-pessoa-sp-${Date.now()}`;
     const nome = 'Pessoa Secretaria Sem Paroquia';
-    const cpf = '07211100002';
+    const cpf = '10000000361';
 
     vi.spyOn(
       mockSaoPedroPessoaService,

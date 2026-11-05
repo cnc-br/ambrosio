@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { BaseService } from 'src/commons/base.service.js';
 import { serializePessoaResponse } from './pessoa.serializer.js';
 import { ENDERECO_INCLUDE, PESSOA_CARISMA_INCLUDE } from 'src/prisma/includes.js';
 import { PAROQUIA_SELECT } from 'src/prisma/selects/paroquia.select.js';
+import { isValidCPF } from 'src/commons/utils/is-valid-cpf.js';
 
 @Injectable()
 export class PessoaService extends BaseService {
@@ -181,6 +183,9 @@ export class PessoaService extends BaseService {
     this.validateUpdateAbility('pessoa');
 
     const pessoa = await this.findOne(id);
+    if (updatePessoaDto.cpf && updatePessoaDto.cpf !== pessoa.cpf) {
+      await this.analisarCPF(updatePessoaDto.cpf);
+    }
 
     // TODO: implementar regra para alteração de estado civil e sexo caso a pessoa esteja casada, para evitar inconsistências no cadastro do casal
 
@@ -260,11 +265,14 @@ export class PessoaService extends BaseService {
     };
   }
 
-  async analisarCPF(cpf: string) {
-    // TODO: colocar validacao de CPF aqui
-    if (cpf === undefined || cpf === '') {
+  async analisarCPF(cpf?: string | null) {
+    if (cpf === undefined || cpf === null || cpf === '') {
       this.logger.log('CPF não informado');
       return;
+    }
+
+    if (!isValidCPF(cpf)) {
+      throw new BadRequestException('CPF inválido');
     }
 
     const pessoa = await this.findOneByCpf(cpf);

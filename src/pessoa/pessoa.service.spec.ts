@@ -1,3 +1,4 @@
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRoleEnum } from 'neocatecumenal';
 import { PessoaService } from './pessoa.service.js';
@@ -33,6 +34,9 @@ describe('PessoaService', () => {
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       findMany: vi.fn(),
+    },
+    pessoaCasal: {
+      findFirst: vi.fn(),
     },
   };
 
@@ -115,6 +119,42 @@ describe('PessoaService', () => {
     expect(saoPedroContatoService).toBeDefined();
   });
 
+  it('analisarCPF deve rejeitar CPF com dígitos verificadores inválidos', async () => {
+    await expect(service.analisarCPF('52998224724')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('analisarCPF deve rejeitar CPFs com todos os dígitos iguais', async () => {
+    await expect(service.analisarCPF('11111111111')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('analisarCPF deve aceitar um CPF válido', async () => {
+    await service.analisarCPF('52998224725');
+
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).toHaveBeenCalledWith('52998224725');
+  });
+
+  it('analisarCPF deve permitir CPF não informado', async () => {
+    await service.analisarCPF(undefined);
+    await service.analisarCPF('');
+    await service.analisarCPF(null);
+
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).not.toHaveBeenCalled();
+  });
+
   it('findOneByCpf deve incluir os contatos buscados na Sao Pedro', async () => {
     const contatos = [
       {
@@ -165,6 +205,102 @@ describe('PessoaService', () => {
       'Você não tem permissão para update pessoa',
     );
     expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+  });
+
+  const setAdminAbility = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).abilityService.createForUser({
+      id: 1,
+      role: UserRoleEnum.ADMIN,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+  };
+
+  it('update não valida CPF quando o CPF não é informado', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+
+    await service.update(1, { nome: 'Novo Nome' });
+
+    expect(saoPedroPessoaServiceMock.getExternalPessoaByCpf).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('update não valida CPF quando o CPF informado é igual ao atual', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+
+    await service.update(1, { cpf: '12345678901' });
+
+    expect(saoPedroPessoaServiceMock.getExternalPessoaByCpf).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('update aceita um CPF novo válido e não registrado', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(null);
+
+    await service.update(1, { cpf: '52998224725' });
+
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).toHaveBeenCalledWith('52998224725');
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('update rejeita CPF novo inválido', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+
+    await expect(service.update(1, { cpf: '52998224724' })).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(saoPedroPessoaServiceMock.getExternalPessoaByCpf).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('update rejeita CPF novo já cadastrado no sistema', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
+      externalPessoa,
+    );
+    prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
+
+    await expect(service.update(1, { cpf: '52998224725' })).rejects.toThrow(
+      ConflictException,
+    );
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).not.toHaveBeenCalled();
   });
 
   it('findAll nao busca contatos e omite o campo contatos na listagem', async () => {

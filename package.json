@@ -60,7 +60,7 @@
     "cls-rtracer": "^2.6.3",
     "dayjs": "^1.11.13",
     "dotenv": "^17.2.3",
-    "neocatecumenal": "^2.1.12",
+    "neocatecumenal": "^2.6.7",
     "nestjs-pino": "^5.3.1",
     "nestjs-resend": "^1.1.0",
     "pg": "^8.17.1",

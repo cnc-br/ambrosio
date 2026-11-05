@@ -41,7 +41,7 @@ describe('PessoaContatoController (e2e)', () => {
       id: 999,
       externalId: `e2e-contato-${Date.now()}`,
       nome: 'Pessoa Contato Mock',
-      cpf: '07211100000',
+      cpf: pessoaMock.cpf,
       estadoCivil: 'SOLTEIRO',
       situacaoReligiosa: { id: 1, descricao: 'LEIGO' },
       escolaridade: 'ANALFABETO',

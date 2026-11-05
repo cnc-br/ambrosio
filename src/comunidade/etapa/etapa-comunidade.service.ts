@@ -62,7 +62,7 @@ export class EtapaComunidadeService extends BaseService {
     });
   }
 
-  async update(comunidadeId: number, id: number, dto: UpdateEtapaDto) {
+  async update(id: number, dto: UpdateEtapaDto) {
     this.validateUpdateAbility('etapa');
 
     return this.prisma.comunidadeEtapa.update({
