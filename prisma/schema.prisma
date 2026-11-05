@@ -356,3 +356,25 @@ enum roles {
   SECRETARIA_PAROQUIA
   NAO_IDENTIFICADO
 }
+
+enum ScheduledJobStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+
+  @@map("scheduled_job_status")
+}
+
+model ScheduledJobExecution {
+  id         String             @id @default(uuid())
+  jobName    String
+  status     ScheduledJobStatus
+  startedAt  DateTime           @default(now())
+  finishedAt DateTime?
+  durationMs Int?
+  error      String?            @db.Text
+
+  @@index([jobName, startedAt])
+  @@index([startedAt])
+  @@map("scheduled_job_executions")
+}
