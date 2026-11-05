@@ -217,6 +217,77 @@ describe('serializeComunidadeResponse - carismas', () => {
     expect(sal.pessoas[0].conjugue).toBeUndefined();
   });
 
+  it('ignora vínculos encerrados (dataSaida preenchida) ao agregar carismas', () => {
+    const responsavel = {
+      id: 1,
+      descricao: 'Responsável',
+      tipo: 'VINCULADO',
+      casalAndaJunto: false,
+    };
+
+    const ativo = {
+      id: 2,
+      externalId: 'uuid-joao',
+      pessoaCarismas: [{ carisma: responsavel }],
+      casamentosComoMarido: [],
+      casamentosComoMulher: [],
+    };
+
+    const exMembro = {
+      id: 3,
+      externalId: 'uuid-maria',
+      pessoaCarismas: [{ carisma: responsavel }],
+      casamentosComoMarido: [],
+      casamentosComoMulher: [],
+    };
+
+    const comunidade = {
+      ...baseComunidade,
+      comunidadePessoas: [
+        { dataSaida: null, pessoa: ativo },
+        { dataSaida: new Date('2025-01-01'), pessoa: exMembro },
+      ],
+    };
+
+    const result = serializeComunidadeResponse(comunidade, mapaPessoas);
+
+    const res = result.carismas.find((c) => c.id === 1);
+    expect(res.pessoas).toHaveLength(1);
+    expect(res.pessoas[0]).toMatchObject({
+      id: 2,
+      externalId: 'uuid-joao',
+      nome: 'João',
+    });
+  });
+
+  it('retorna carismas como array vazio quando só há vínculos encerrados', () => {
+    const responsavel = {
+      id: 1,
+      descricao: 'Responsável',
+      tipo: 'VINCULADO',
+      casalAndaJunto: false,
+    };
+
+    const exMembro = {
+      id: 3,
+      externalId: 'uuid-maria',
+      pessoaCarismas: [{ carisma: responsavel }],
+      casamentosComoMarido: [],
+      casamentosComoMulher: [],
+    };
+
+    const comunidade = {
+      ...baseComunidade,
+      comunidadePessoas: [
+        { dataSaida: new Date('2025-01-01'), pessoa: exMembro },
+      ],
+    };
+
+    const result = serializeComunidadeResponse(comunidade, mapaPessoas);
+
+    expect(result.carismas).toEqual([]);
+  });
+
   it('retorna carismas como array vazio quando a comunidade não possui pessoas com carisma', () => {
     const comunidade = {
       ...baseComunidade,

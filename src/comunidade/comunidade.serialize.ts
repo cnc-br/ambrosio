@@ -79,7 +79,9 @@ function serializeCarismas(
   comunidade: any,
   mapaPessoasExternas?: MapaPessoasExternas,
 ): any[] {
-  const pessoasDaComunidade = comunidade?.comunidadePessoas || [];
+  const pessoasDaComunidade = (comunidade?.comunidadePessoas || []).filter(
+    (vinculo) => vinculo?.dataSaida == null,
+  );
   const porCarisma = new Map<
     number,
     { entry: any; pessoas: any[]; chaves: Set<string> }
