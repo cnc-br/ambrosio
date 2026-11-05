@@ -183,6 +183,9 @@ export class PessoaService extends BaseService {
     this.validateUpdateAbility('pessoa');
 
     const pessoa = await this.findOne(id);
+    if (updatePessoaDto.cpf && updatePessoaDto.cpf !== pessoa.cpf) {
+      await this.analisarCPF(updatePessoaDto.cpf);
+    }
 
     // TODO: implementar regra para alteração de estado civil e sexo caso a pessoa esteja casada, para evitar inconsistências no cadastro do casal
 

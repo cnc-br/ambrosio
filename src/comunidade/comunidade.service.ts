@@ -226,7 +226,7 @@ export class ComunidadeService extends BaseService {
           }
         } catch (error) {
           this.logger.warn(
-            `Não foi possível resolver nome externo da pessoa ${uuid} para carismas: ${error instanceof Error ? error.message : String(error)
+            `Não foi possível resolver nome externo da pessoa ${uuid} para carismas: ${error instanceof Error ? error.message : String(error)}
             }`,
           );
         }
