@@ -116,5 +116,29 @@ describe('CaslAbilityService', () => {
     expect(accessibleBy(service.ability, 'create').comunidade).toEqual({});
     expect(accessibleBy(service.ability, 'update').comunidade).toEqual({});
   });
+
+  it('permite ao ADMIN ler e excluir o histórico de execuções de manutenção', () => {
+    const user = {
+      id: 'usuario-admin',
+      role: UserRoleEnum.ADMIN,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+    service.createForUser(user);
+
+    expect(service.ability.can('read', 'scheduledJobExecution')).toBe(true);
+    expect(service.ability.can('delete', 'scheduledJobExecution')).toBe(true);
+  });
+
+  it('nega ao SECRETARIA_CNC o acesso ao histórico de execuções de manutenção', () => {
+    const user = {
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+    service.createForUser(user);
+
+    expect(service.ability.can('read', 'scheduledJobExecution')).toBe(false);
+    expect(service.ability.can('delete', 'scheduledJobExecution')).toBe(false);
+  });
 });
 

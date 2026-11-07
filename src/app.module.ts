@@ -34,6 +34,7 @@ import { HealthModule } from './health/health.module.js';
 import { ResendModule } from 'nestjs-resend';
 import * as rTracer from 'cls-rtracer';
 import { ComunidadeModule } from './comunidade/comunidade.module.js';
+import { MaintenanceModule } from './maintenance/maintenance.module.js';
 
 const isElkEnabled = process.env.ELK_ENABLED === 'true';
 const elkLogFile =
@@ -156,6 +157,7 @@ function stringifyRequestBody(body: unknown): string | undefined {
     CarismaModule,
     ExternalModule,
     HealthModule,
+    MaintenanceModule,
   ],
   controllers: [AppController],
   providers: [
