@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   UseGuards,
@@ -34,14 +36,27 @@ export class AvisosController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
-    return this.avisosService.findOne(+id);
+  findOne(
+    @Param(
+      'id',
+      new ParseIntPipe({ errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE }),
+    )
+    id: number,
+  ) {
+    return this.avisosService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(AuthGuard, RoleGuard)
   @RequiredRoles(UserRoleEnum.ADMIN)
-  update(@Param('id') id: number, @Body() updateAvisoDto: UpdateAvisoDto) {
-    return this.avisosService.update(+id, updateAvisoDto);
+  update(
+    @Param(
+      'id',
+      new ParseIntPipe({ errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE }),
+    )
+    id: number,
+    @Body() updateAvisoDto: UpdateAvisoDto,
+  ) {
+    return this.avisosService.update(id, updateAvisoDto);
   }
 }

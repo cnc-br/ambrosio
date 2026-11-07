@@ -97,6 +97,16 @@ describe('AvisosController (e2e)', () => {
       });
   });
 
+  it(`/avisos/:id (GET) - 406 | id não numérico`, () => {
+    return request(app.getHttpServer())
+      .get('/avisos/abc')
+      .expect(406)
+      .expect((res) => {
+        expect(res.body.statusCode).toBe(406);
+        expect(typeof res.body.message).toBe('string');
+      });
+  });
+
   it(`/avisos (POST) - 401 | não pode cadastrar sem autenticação`, () => {
     return request(app.getHttpServer())
       .post('/avisos')
@@ -195,6 +205,17 @@ describe('AvisosController (e2e)', () => {
     expect(new Date(response.body.data.dataFim)).toEqual(
       new Date('2026-12-31T23:59:59.000Z'),
     );
+  });
+
+  it(`/avisos/:id (PATCH) - 406 | id não numérico mesmo autenticado como ADMIN`, () => {
+    return request(app.getHttpServer())
+      .patch('/avisos/abc')
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ texto: 'Não importa' })
+      .expect(406)
+      .expect((res) => {
+        expect(res.body.statusCode).toBe(406);
+      });
   });
 
   it(`/avisos/:id (DELETE) - 404 | rota de exclusão não existe`, async () => {

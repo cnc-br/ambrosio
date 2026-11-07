@@ -9,3 +9,4 @@
   4. Validação: DTOs estritos com class-validator e class-transformer em todos os endpoints.
   5. CASL: Autorizações via @casl/ability.
   6. OpenSpec: Respeite o fluxo de propostas antes de implementar (opsx-propose / opsx-apply).
+  7. Params numéricos em controllers: valide ids inteiros com `ParseIntPipe({ errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE })` no `@Param('id')` (e `@Query` numérico) **antes** de chamar o service. Nunca repasse `NaN` (ex.: `+id` vindo de string inválida `/avisos/abc`) ao Prisma, pois a exceção não mapeada vira 500. Cobrir com teste e2e: requisição com id não numérico deve retornar `406 Not Acceptable`.

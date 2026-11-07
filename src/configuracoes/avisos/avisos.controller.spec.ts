@@ -10,10 +10,10 @@ import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { AvisosController } from './avisos.controller.js';
 import { AvisosService } from './avisos.service.js';
 
-const getGuards = (handler: (...args: unknown[]) => unknown) =>
+const getGuards = (handler: (...args: never[]) => unknown) =>
   (Reflect.getMetadata('__guards__', handler) as object[] | undefined) ?? [];
 
-const getRequiredRoles = (handler: (...args: unknown[]) => unknown) =>
+const getRequiredRoles = (handler: (...args: never[]) => unknown) =>
   Reflect.getMetadata('roles', handler);
 
 describe('AvisosController', () => {
@@ -62,19 +62,19 @@ describe('AvisosController', () => {
     expect(findAll).toHaveBeenCalledTimes(1);
   });
 
-  it('delega a busca individual ao service convertendo o id para número', async () => {
+  it('delega a busca individual ao service com o id numérico', async () => {
     findOne.mockResolvedValue({});
 
-    await controller.findOne('9' as unknown as number);
+    await controller.findOne(9);
 
     expect(findOne).toHaveBeenCalledWith(9);
   });
 
-  it('delega a atualização ao service convertendo o id para número', async () => {
+  it('delega a atualização ao service com o id numérico', async () => {
     const dto = { texto: 'Texto novo' };
     update.mockResolvedValue({ id: 9, ...dto });
 
-    await controller.update('9' as unknown as number, dto);
+    await controller.update(9, dto);
 
     expect(update).toHaveBeenCalledWith(9, dto);
   });
