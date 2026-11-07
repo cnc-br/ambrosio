@@ -78,11 +78,24 @@ export class MaintenanceController {
       'nenhum dado de negócio é alterado.',
   })
   @ApiOkResponse({
-    description: 'Quantidade de registros históricos excluídos.',
+    description:
+      'Quantidade de registros históricos excluídos, dentro do envelope de paginação.',
     schema: {
       type: 'object',
       properties: {
-        deleted: { type: 'number', example: 10 },
+        server: {
+          type: 'string',
+          example: '127.0.0.1/maintenance/executions',
+        },
+        total: { type: 'number', example: 1 },
+        page: { type: 'number', example: 1 },
+        limit: { type: 'number', example: 1 },
+        data: {
+          type: 'object',
+          properties: {
+            deleted: { type: 'number', example: 10 },
+          },
+        },
       },
     },
   })

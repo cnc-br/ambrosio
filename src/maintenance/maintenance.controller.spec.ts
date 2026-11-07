@@ -122,4 +122,21 @@ describe('MaintenanceController', () => {
       expect.stringContaining('usuario-admin'),
     );
   });
+
+  it('documenta o DELETE com o envelope de paginação e deleted em data', () => {
+    const responses = Reflect.getMetadata(
+      'swagger/apiResponse',
+      MaintenanceController.prototype.removeHistory,
+    );
+
+    expect(responses['200'].schema.properties).toHaveProperty('server');
+    expect(responses['200'].schema.properties).toHaveProperty('total');
+    expect(responses['200'].schema.properties).toHaveProperty('page');
+    expect(responses['200'].schema.properties).toHaveProperty('limit');
+    expect(responses['200'].schema.properties.data.properties.deleted).toEqual({
+      type: 'number',
+      example: 10,
+    });
+    expect(responses['200'].schema.properties).not.toHaveProperty('deleted');
+  });
 });
