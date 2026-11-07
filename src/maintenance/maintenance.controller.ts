@@ -1,4 +1,12 @@
-import { Controller, Delete, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Logger,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiForbiddenResponse,
   ApiOkResponse,
@@ -9,8 +17,11 @@ import {
 } from '@nestjs/swagger';
 import { UserRoleEnum } from 'neocatecumenal';
 import { AuthGuard } from 'src/auth/auth.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { RequiredRoles } from 'src/auth/required-roles.decorator.js';
+import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
+import type { user } from 'src/prisma/generated-client.js';
 import { FindAllExecutionsQueryDto } from './dto/find-all-executions-query.dto.js';
 import { MaintenanceService } from './maintenance.service.js';
 
@@ -18,7 +29,12 @@ import { MaintenanceService } from './maintenance.service.js';
 @UseGuards(AuthGuard, RoleGuard)
 @Controller('maintenance')
 export class MaintenanceController {
-  constructor(private readonly maintenanceService: MaintenanceService) {}
+  private readonly logger = new Logger(MaintenanceController.name);
+
+  constructor(
+    private readonly maintenanceService: MaintenanceService,
+    private readonly abilityService: CaslAbilityService,
+  ) {}
 
   @Get('executions')
   @RequiredRoles(UserRoleEnum.ADMIN)
@@ -41,8 +57,14 @@ export class MaintenanceController {
   })
   @ApiOkResponse({ description: 'Histórico retornado com paginação.' })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido.' })
-  @ApiForbiddenResponse({ description: 'Usuário sem o papel ADMIN.' })
-  findAll(@Query() query: FindAllExecutionsQueryDto) {
+  @ApiForbiddenResponse({
+    description: 'Usuário sem o papel ADMIN ou sem permissão CASL.',
+  })
+  findAll(
+    @CurrentUser() user: user,
+    @Query() query: FindAllExecutionsQueryDto,
+  ) {
+    this.authorize(user, 'read');
     return this.maintenanceService.findAll(query.page, query.limit);
   }
 
@@ -65,8 +87,28 @@ export class MaintenanceController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido.' })
-  @ApiForbiddenResponse({ description: 'Usuário sem o papel ADMIN.' })
-  removeHistory() {
+  @ApiForbiddenResponse({
+    description: 'Usuário sem o papel ADMIN ou sem permissão CASL.',
+  })
+  removeHistory(@CurrentUser() user: user) {
+    this.authorize(user, 'delete');
     return this.maintenanceService.deleteHistory();
+  }
+
+  /**
+   * A checagem CASL fica no controller porque o `MaintenanceService` também é
+   * consumido pelo job agendado e deve permanecer singleton (o
+   * `CaslAbilityService` tem escopo de requisição).
+   */
+  private authorize(user: user, action: 'read' | 'delete'): void {
+    if (!this.abilityService.ability.can(action, 'scheduledJobExecution')) {
+      this.logger.warn(
+        `Acesso negado ao histórico de manutenção (${action}) para o usuário ${user.id}.`,
+      );
+      const descricao = action === 'read' ? 'ler' : 'excluir';
+      throw new ForbiddenException(
+        `Você não tem permissão para ${descricao} o histórico de manutenção.`,
+      );
+    }
   }
 }

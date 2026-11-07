@@ -5,5 +5,5 @@ Consulte a governança canônica em:
 
 Diretrizes:
 1. Pratique TDD estrito: testes antes de implementações de negócio.
-2. Não exponha segredos ou credenciais em código ou documentação.
+2. Não exponha segredos ou credenciais em código ou documentação. Nos arquivos de testes (.spec.ts) deixar passar passwords simples como por exemplo 123456, admin, password, etc. para fins de teste.
 3. Respeite as especificações canônicas do projeto em gestao-devsecops/specs/.

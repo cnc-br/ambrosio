@@ -12,6 +12,7 @@ import {
   localidade,
   paroquia,
   pessoa,
+  ScheduledJobExecution,
   user,
 } from 'src/prisma/generated-client.js';
 
@@ -29,6 +30,7 @@ export type PermissionResource =
     carisma: carisma;
     etapa: etapa;
     estadoCivil: estadoCivil;
+    scheduledJobExecution: ScheduledJobExecution;
   }>
   | 'all';
 
