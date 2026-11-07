@@ -11,6 +11,7 @@ import { DioceseModule } from 'src/diocese/diocese.module.js';
 import { SituacaoReligiosaModule } from './situacao-religiosa/situacao-religiosa.module.js';
 import { EtapasService } from './etapas/etapas.service.js';
 import { EtapasController } from './etapas/etapas.controller.js';
+import { AvisosModule } from './avisos/avisos.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { EtapasController } from './etapas/etapas.controller.js';
     EstadoModule,
     CidadeModule,
     SituacaoReligiosaModule,
+    AvisosModule,
   ],
   providers: [EtapasService],
   controllers: [EtapasController],

@@ -334,6 +334,16 @@ model comunidadeHistorico {
   createdAt    DateTime   @default(now())
 }
 
+model aviso {
+  id        Int      @id @default(autoincrement())
+  texto     String   @db.Text
+  dataFim   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([dataFim])
+}
+
 enum Sexo {
   MASCULINO
   FEMININO
