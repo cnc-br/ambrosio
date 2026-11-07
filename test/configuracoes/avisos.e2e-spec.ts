@@ -218,6 +218,42 @@ describe('AvisosController (e2e)', () => {
       });
   });
 
+  it(`/avisos/:id (PATCH) - 400 | rejeita texto null em vez de erro de servidor`, async () => {
+    const aviso = await prisma.aviso.create({
+      data: {
+        texto: 'Cadastrado',
+        dataFim: new Date('2026-12-31T23:59:59.000Z'),
+      },
+    });
+
+    return request(app.getHttpServer())
+      .patch(`/avisos/${aviso.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ texto: null })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.statusCode).toBe(400);
+      });
+  });
+
+  it(`/avisos/:id (PATCH) - 400 | rejeita dataFim null em vez de erro de servidor`, async () => {
+    const aviso = await prisma.aviso.create({
+      data: {
+        texto: 'Cadastrado',
+        dataFim: new Date('2026-12-31T23:59:59.000Z'),
+      },
+    });
+
+    return request(app.getHttpServer())
+      .patch(`/avisos/${aviso.id}`)
+      .set('Authorization', `Bearer ${tokenAdmin}`)
+      .send({ dataFim: null })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.statusCode).toBe(400);
+      });
+  });
+
   it(`/avisos/:id (DELETE) - 404 | rota de exclusão não existe`, async () => {
     const aviso = await prisma.aviso.create({
       data: {

@@ -96,4 +96,16 @@ describe('UpdateAvisoDto', () => {
 
     expect(errors.map((error) => error.property)).toContain('texto');
   });
+
+  it('rejeita texto null quando informado', async () => {
+    const { errors } = await validateUpdate({ texto: null });
+
+    expect(errors.map((error) => error.property)).toContain('texto');
+  });
+
+  it('rejeita dataFim null quando informada', async () => {
+    const { errors } = await validateUpdate({ dataFim: null });
+
+    expect(errors.map((error) => error.property)).toContain('dataFim');
+  });
 });

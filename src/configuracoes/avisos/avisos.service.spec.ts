@@ -103,4 +103,25 @@ describe('AvisosService', () => {
     });
     expect(resultado).toEqual(avisoAtualizado);
   });
+
+  it('ignora valores null ao atualizar, sem repassá-los ao Prisma', async () => {
+    update.mockResolvedValue({
+      id: 7,
+      texto: 'Só o texto',
+      dataFim: new Date('2027-06-30T00:00:00.000Z'),
+      createdAt: new Date('2026-11-07T10:00:00.000Z'),
+      updatedAt: new Date('2026-11-07T11:00:00.000Z'),
+    });
+
+    const resultado = await service.update(7, {
+      texto: 'Só o texto',
+      dataFim: null as unknown as string,
+    });
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { texto: 'Só o texto' },
+    });
+    expect(resultado.texto).toBe('Só o texto');
+  });
 });
