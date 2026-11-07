@@ -18,6 +18,7 @@ export const MODEL_NAME_MAP: Record<string, string> = {
   regiao: 'Região',
   macroregiao: 'Macro Região',
   comunidade: 'Comunidade',
+  aviso: 'Aviso',
   // adicione mais conforme o projeto for crescendo
   // Atenção: os nomes devem ser tudo minúsculo e sem acentos
 };
