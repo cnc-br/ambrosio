@@ -16,6 +16,13 @@ const getGuards = (handler: (...args: never[]) => unknown) =>
 const getRequiredRoles = (handler: (...args: never[]) => unknown) =>
   Reflect.getMetadata('roles', handler);
 
+const getApiResponses = (
+  handler: (...args: never[]) => unknown,
+): Record<string, unknown> =>
+  (Reflect.getMetadata('swagger/apiResponse', handler) as
+    | Record<string, unknown>
+    | undefined) ?? {};
+
 describe('AvisosController', () => {
   let controller: AvisosController;
   let create: ReturnType<typeof vi.fn>;
@@ -103,5 +110,40 @@ describe('AvisosController', () => {
 
     expect(getGuards(AvisosController.prototype.findOne)).toHaveLength(0);
     expect(getRequiredRoles(AvisosController.prototype.findOne)).toBeUndefined();
+  });
+
+  it('documenta as respostas Swagger do POST /avisos', () => {
+    const responses = getApiResponses(AvisosController.prototype.create);
+
+    expect(responses).toHaveProperty('201');
+    expect(responses).toHaveProperty('400');
+    expect(responses).toHaveProperty('401');
+    expect(responses).toHaveProperty('403');
+  });
+
+  it('documenta as respostas Swagger do GET /avisos', () => {
+    const responses = getApiResponses(AvisosController.prototype.findAll);
+
+    expect(responses).toHaveProperty('200');
+  });
+
+  it('documenta as respostas Swagger do GET /avisos/:id', () => {
+    const responses = getApiResponses(AvisosController.prototype.findOne);
+
+    expect(responses).toHaveProperty('200');
+    expect(responses).toHaveProperty('400');
+    expect(responses).toHaveProperty('406');
+    expect(responses).toHaveProperty('404');
+  });
+
+  it('documenta as respostas Swagger do PATCH /avisos/:id', () => {
+    const responses = getApiResponses(AvisosController.prototype.update);
+
+    expect(responses).toHaveProperty('200');
+    expect(responses).toHaveProperty('400');
+    expect(responses).toHaveProperty('406');
+    expect(responses).toHaveProperty('404');
+    expect(responses).toHaveProperty('401');
+    expect(responses).toHaveProperty('403');
   });
 });
