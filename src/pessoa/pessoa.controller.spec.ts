@@ -151,4 +151,34 @@ describe('PessoaController', () => {
     expect(contatoServiceMock.create).toHaveBeenCalledWith(1, dto);
     expect(result).toEqual(contato);
   });
+
+  it('repassa o comunidadeId ao PessoaService no create', async () => {
+    const dto = { nome: 'Maria', situacaoReligiosa: { id: 1 } };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createSpy = vi
+      .spyOn((controller as any).pessoaService, 'create')
+      .mockResolvedValue({ id: 1 } as never);
+
+    await controller.create(dto as never, 10);
+
+    expect(createSpy).toHaveBeenCalledWith(dto, 10);
+  });
+
+  it('documenta o 406 e o query param comunidadeId no Swagger do POST /pessoa', () => {
+    const responses = Reflect.getMetadata(
+      'swagger/apiResponse',
+      PessoaController.prototype.create,
+    ) as Record<string, unknown>;
+    const parameters = Reflect.getMetadata(
+      'swagger/apiParameters',
+      PessoaController.prototype.create,
+    ) as Array<Record<string, unknown>>;
+
+    expect(responses).toHaveProperty('406');
+    expect(parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'comunidadeId', required: false }),
+      ]),
+    );
+  });
 });

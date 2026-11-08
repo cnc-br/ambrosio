@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { CreatePessoaDto } from './dto/create-pessoa.dto.js';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto.js';
 import { PrismaService } from 'src/prisma.service.js';
@@ -11,8 +7,9 @@ import { LIMIT_DEFAULT, PAGE_DEFAULT } from 'src/commons/constants/constants.js'
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { accessibleBy } from '@casl/prisma';
 import { Pessoa, PessoaConjugue, PessoaContato } from 'neocatecumenal';
-import { pessoa } from 'src/prisma/generated-client.js';
+import { pessoa, situacaoReligiosa } from 'src/prisma/generated-client.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
+import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 import { BaseService } from 'src/commons/base.service.js';
@@ -28,12 +25,13 @@ export class PessoaService extends BaseService {
     private situacaoReligiosaService: SituacaoReligiosaService,
     private readonly saoPedroPessoaService: SaoPedroPessoaService,
     private readonly saoPedroContatoService: SaoPedroContatoService,
+    private readonly comunidadeService: ComunidadeService,
     abilityService: CaslAbilityService,
   ) {
     super(abilityService);
   }
 
-  async create(createPessoaDto: CreatePessoaDto) {
+  async create(createPessoaDto: CreatePessoaDto, comunidadeId?: number) {
     this.validateCreateAbility('pessoa');
 
     const situacaoReligiosa = await this.situacaoReligiosaService.findOne(
@@ -41,6 +39,40 @@ export class PessoaService extends BaseService {
     );
     await this.analisarCPF(createPessoaDto.cpf);
 
+    if (comunidadeId !== undefined) {
+      await this.validarVinculoComunidade(comunidadeId);
+    }
+
+    const pessoa = await this.criarPessoaCompleta(
+      createPessoaDto,
+      situacaoReligiosa,
+    );
+
+    if (comunidadeId !== undefined) {
+      await this.vincularPessoaNaComunidade(comunidadeId, pessoa.id);
+    }
+
+    return pessoa;
+  }
+
+  /**
+   * Valida, antes de qualquer escrita, que a comunidade informada existe e está
+   * dentro do escopo de atualização do usuário (404 inexistente, 403 fora do escopo).
+   */
+  private async validarVinculoComunidade(comunidadeId: number) {
+    await this.comunidadeService.validarComunidadeDentroDoEscopoDeAtualizacao(
+      comunidadeId,
+    );
+  }
+
+  /**
+   * Cria a pessoa na API externa (São Pedro) e na tabela local e serializa a
+   * resposta. Responsabilidade isolada do fluxo de criação.
+   */
+  private async criarPessoaCompleta(
+    createPessoaDto: CreatePessoaDto,
+    situacaoReligiosa: situacaoReligiosa,
+  ) {
     try {
       const external =
         await this.saoPedroPessoaService.createExternalPessoa(createPessoaDto);
@@ -57,6 +89,27 @@ export class PessoaService extends BaseService {
       return serializePessoaResponse(pessoa, external);
     } catch (error) {
       this.logger.error('Error posting external pessoa', error);
+    }
+  }
+
+  /**
+   * Vincula a pessoa recém-criada à comunidade. Se a criação do vínculo falhar
+   * (caso residual, já que o escopo foi validado antes), desfaz o cadastro local
+   * da pessoa e repropaga o erro para não deixar pessoa sem o vínculo solicitado.
+   */
+  private async vincularPessoaNaComunidade(
+    comunidadeId: number,
+    pessoaId: number,
+  ) {
+    try {
+      await this.comunidadeService.adicionarPessoa(comunidadeId, pessoaId);
+    } catch (error) {
+      this.logger.error(
+        `Falha ao vincular pessoa ${pessoaId} na comunidade ${comunidadeId}. Desfazendo cadastro da pessoa.`,
+        error,
+      );
+      await this.prisma.pessoa.delete({ where: { id: pessoaId } });
+      throw error;
     }
   }
 
