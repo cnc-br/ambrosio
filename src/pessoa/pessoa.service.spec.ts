@@ -1,10 +1,15 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRoleEnum } from 'neocatecumenal';
 import { PessoaService } from './pessoa.service.js';
 import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
+import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 
@@ -14,6 +19,7 @@ describe('PessoaService', () => {
   let situacaoReligiosaService: SituacaoReligiosaService;
   let saoPedroPessoaService: SaoPedroPessoaService;
   let saoPedroContatoService: SaoPedroContatoService;
+  let comunidadeService: ComunidadeService;
   let abilityService: CaslAbilityService;
 
   const saoPedroContatoServiceMock = {
@@ -27,10 +33,16 @@ describe('PessoaService', () => {
     createExternalPessoa: vi.fn(),
     updateExternalPessoa: vi.fn(),
   };
+  const comunidadeServiceMock = {
+    validarComunidadeDentroDoEscopoDeAtualizacao: vi.fn(),
+    adicionarPessoa: vi.fn(),
+  };
   const prismaMock = {
     create: vi.fn(),
     findFirstOrThrow: vi.fn(),
     pessoa: {
+      create: vi.fn(),
+      delete: vi.fn(),
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       findMany: vi.fn(),
@@ -92,6 +104,10 @@ describe('PessoaService', () => {
           provide: SaoPedroContatoService,
           useValue: saoPedroContatoServiceMock,
         },
+        {
+          provide: ComunidadeService,
+          useValue: comunidadeServiceMock,
+        },
       ],
     }).compile();
 
@@ -106,6 +122,7 @@ describe('PessoaService', () => {
     situacaoReligiosaService = module.get<SituacaoReligiosaService>(
       SituacaoReligiosaService,
     );
+    comunidadeService = module.get<ComunidadeService>(ComunidadeService);
     abilityService =
       await module.resolve<CaslAbilityService>(CaslAbilityService);
   });
@@ -114,6 +131,7 @@ describe('PessoaService', () => {
     expect(service).toBeDefined();
     expect(prismaService).toBeDefined();
     expect(situacaoReligiosaService).toBeDefined();
+    expect(comunidadeService).toBeDefined();
     expect(abilityService).toBeDefined();
     expect(saoPedroPessoaService).toBeDefined();
     expect(saoPedroContatoService).toBeDefined();
@@ -320,5 +338,95 @@ describe('PessoaService', () => {
     ).toHaveBeenCalledTimes(0);
     expect(result).toHaveLength(1);
     expect(result[0].contatos).toBeUndefined();
+  });
+
+  const createPessoaDto = {
+    nome: 'Maria Silva Santos',
+    conhecidoPor: 'Maria',
+    nacionalidade: 'brasileira',
+    situacaoReligiosa: { id: 1, descricao: 'LEIGO' },
+  } as unknown as Parameters<PessoaService['create']>[0];
+
+  const prepararCriacao = () => {
+    setAdminAbility();
+    vi.mocked(situacaoReligiosaService.findOne).mockResolvedValue({
+      id: 1,
+      descricao: 'LEIGO',
+    } as never);
+    saoPedroPessoaServiceMock.createExternalPessoa.mockResolvedValue(
+      externalPessoa,
+    );
+    prismaMock.pessoa.create.mockResolvedValue(pessoaLocal);
+  };
+
+  it('create com comunidadeId valida o escopo ANTES de criar a pessoa em 403/404', async () => {
+    prepararCriacao();
+    comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao.mockRejectedValue(
+      new ForbiddenException('Você não tem permissão'),
+    );
+
+    await expect(service.create(createPessoaDto, 10)).rejects.toThrow(
+      ForbiddenException,
+    );
+
+    expect(
+      comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao,
+    ).toHaveBeenCalledWith(10);
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).not.toHaveBeenCalled();
+    expect(prismaMock.pessoa.create).not.toHaveBeenCalled();
+  });
+
+  it('create cria a pessoa e depois vincula à comunidade', async () => {
+    prepararCriacao();
+    comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao.mockResolvedValue(
+      {},
+    );
+    comunidadeServiceMock.adicionarPessoa.mockResolvedValue({});
+
+    const result = await service.create(createPessoaDto, 10);
+
+    expect(
+      comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao,
+    ).toHaveBeenCalledWith(10);
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).toHaveBeenCalledWith(createPessoaDto);
+    expect(prismaMock.pessoa.create).toHaveBeenCalled();
+    expect(comunidadeServiceMock.adicionarPessoa).toHaveBeenCalledWith(10, 1);
+    expect(result.id).toBe(1);
+  });
+
+  it('create desfaz o cadastro local da pessoa quando o vínculo falha', async () => {
+    prepararCriacao();
+    comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao.mockResolvedValue(
+      {},
+    );
+    const erroVinculo = new Error('Falha ao vincular');
+    comunidadeServiceMock.adicionarPessoa.mockRejectedValue(erroVinculo);
+
+    await expect(service.create(createPessoaDto, 10)).rejects.toThrow(
+      'Falha ao vincular',
+    );
+
+    expect(prismaMock.pessoa.delete).toHaveBeenCalledWith({
+      where: { id: 1 },
+    });
+  });
+
+  it('create sem comunidadeId não valida vínculo nem adiciona à comunidade', async () => {
+    prepararCriacao();
+
+    const result = await service.create(createPessoaDto);
+
+    expect(
+      comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao,
+    ).not.toHaveBeenCalled();
+    expect(comunidadeServiceMock.adicionarPessoa).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).toHaveBeenCalled();
+    expect(result.id).toBe(1);
   });
 });

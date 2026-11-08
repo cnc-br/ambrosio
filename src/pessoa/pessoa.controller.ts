@@ -5,6 +5,8 @@ import {
   Body,
   Patch,
   Param,
+  HttpStatus,
+  ParseIntPipe,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -16,8 +18,10 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNotAcceptableResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { SexoQueryParamDto } from './dto/sexo.dto.js';
@@ -43,6 +47,17 @@ export class PessoaController {
   @ApiConflictResponse({
     description: 'O CPF ja registrado para {pessoa.nome} de id: {pessoa.id}',
   })
+  @ApiNotAcceptableResponse({
+    description: 'comunidadeId não é um inteiro válido.',
+  })
+  @ApiQuery({
+    name: 'comunidadeId',
+    required: false,
+    type: Number,
+    description:
+      'ID da comunidade para vincular a pessoa ao cadastro (valida se a ' +
+      'comunidade está dentro do escopo do usuário).',
+  })
   @ApiBody({
     description: 'Dados para criação de uma pessoa',
     examples: {
@@ -67,8 +82,18 @@ export class PessoaController {
       },
     },
   })
-  create(@Body() createPessoaDto: CreatePessoaDto) {
-    return this.pessoaService.create(createPessoaDto);
+  create(
+    @Body() createPessoaDto: CreatePessoaDto,
+    @Query(
+      'comunidadeId',
+      new ParseIntPipe({
+        optional: true,
+        errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE,
+      }),
+    )
+    comunidadeId?: number,
+  ) {
+    return this.pessoaService.create(createPessoaDto, comunidadeId);
   }
 
   @Post('/casal')

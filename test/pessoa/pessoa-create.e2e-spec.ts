@@ -324,4 +324,155 @@ describe('PessoaCreateController (e2e)', () => {
         expect(res.body.statusCode).toBe(404);
       });
   });
+
+  it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra pessoa e vincula à comunidade da própria paróquia`, async () => {
+    const comunidade = await prisma.comunidade.findFirst({
+      where: { paroquiaId: 1 },
+    });
+    expect(comunidade).toBeDefined();
+
+    const cpf = '10000000442';
+    const nome = 'Pessoa Vinculada a Comunidade';
+    const externalId = `e2e-pessoa-vinc-${Date.now()}`;
+
+    vi.spyOn(
+      mockSaoPedroPessoaService,
+      'getExternalPessoaByCpf',
+    ).mockResolvedValueOnce(null);
+    vi.spyOn(
+      mockSaoPedroPessoaService,
+      'createExternalPessoa',
+    ).mockResolvedValueOnce(externalPessoaMock(externalId, nome, cpf));
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}?comunidadeId=${comunidade.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .send({
+        ...pessoaMock,
+        cpf,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).toHaveProperty('id');
+
+    const vinculo = await prisma.comunidadePessoa.findUnique({
+      where: {
+        comunidadeId_pessoaId: {
+          comunidadeId: comunidade.id,
+          pessoaId: response.body.data.id,
+        },
+      },
+    });
+    expect(vinculo).toBeDefined();
+  });
+
+  it(`/${principal} (POST) - 403 | SECRETARIA_CNC não vincula pessoa a comunidade fora do escopo, sem criar a pessoa`, async () => {
+    let comunidadeForaDoEscopo = await prisma.comunidade.findFirst({
+      where: { paroquiaId: 2 },
+    });
+
+    if (!comunidadeForaDoEscopo) {
+      const maxNumero = await prisma.comunidade.aggregate({
+        _max: { numeroDaComunidade: true },
+      });
+      comunidadeForaDoEscopo = await prisma.comunidade.create({
+        data: {
+          paroquiaId: 2,
+          numeroDaComunidade: (maxNumero._max.numeroDaComunidade ?? 0) + 1,
+          quantidadeMembros: 1,
+        },
+      });
+    }
+
+    const chamadasExternasAntes =
+      mockSaoPedroPessoaService.createExternalPessoa.mock.calls.length;
+    const cpf = '10000000523';
+
+    vi.spyOn(
+      mockSaoPedroPessoaService,
+      'getExternalPessoaByCpf',
+    ).mockResolvedValueOnce(null);
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}?comunidadeId=${comunidadeForaDoEscopo.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .send({
+        ...pessoaMock,
+        cpf,
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('Forbidden');
+    expect(
+      mockSaoPedroPessoaService.createExternalPessoa.mock.calls.length,
+    ).toBe(chamadasExternasAntes);
+  });
+
+  it(`/${principal} (POST) - 404 | comunidadeId inexistente não cria pessoa`, async () => {
+    const chamadasExternasAntes =
+      mockSaoPedroPessoaService.createExternalPessoa.mock.calls.length;
+    const cpf = '10000000604';
+
+    vi.spyOn(
+      mockSaoPedroPessoaService,
+      'getExternalPessoaByCpf',
+    ).mockResolvedValueOnce(null);
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}?comunidadeId=999999`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+      .send({
+        ...pessoaMock,
+        cpf,
+      });
+
+    expect(response.status).toBe(404);
+    expect(response.body.statusCode).toBe(404);
+    expect(
+      mockSaoPedroPessoaService.createExternalPessoa.mock.calls.length,
+    ).toBe(chamadasExternasAntes);
+  });
+
+  it(`/${principal} (POST) - 406 | comunidadeId não numérico`, () => {
+    return request(app.getHttpServer())
+      .post(`/${principal}?comunidadeId=abc`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ...pessoaMock,
+      })
+      .expect(406)
+      .expect((res) => {
+        expect(res.body.statusCode).toBe(406);
+      });
+  });
+
+  it(`/${principal} (POST) - 201 | cadastro sem comunidadeId não cria vínculo`, async () => {
+    const cpf = '10000000795';
+    const nome = 'Pessoa Sem Vinculo';
+    const externalId = `e2e-pessoa-svinc-${Date.now()}`;
+
+    vi.spyOn(
+      mockSaoPedroPessoaService,
+      'getExternalPessoaByCpf',
+    ).mockResolvedValueOnce(null);
+    vi.spyOn(
+      mockSaoPedroPessoaService,
+      'createExternalPessoa',
+    ).mockResolvedValueOnce(externalPessoaMock(externalId, nome, cpf));
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        ...pessoaMock,
+        cpf,
+      });
+
+    expect(response.status).toBe(201);
+
+    const vinculos = await prisma.comunidadePessoa.findMany({
+      where: { pessoaId: response.body.data.id },
+    });
+    expect(vinculos).toHaveLength(0);
+  });
 });

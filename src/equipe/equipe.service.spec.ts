@@ -4,6 +4,7 @@ import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.j
 import { PrismaService } from 'src/prisma.service.js';
 import { TipoEquipeService } from 'src/configuracoes/tipo-equipe/tipo-equipe.service.js';
 import { PessoaService } from 'src/pessoa/pessoa.service.js';
+import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { HttpModule } from '@nestjs/axios';
@@ -23,6 +24,7 @@ describe('EquipeService', () => {
         CaslAbilityService,
         TipoEquipeService,
         PessoaService,
+        { provide: ComunidadeService, useValue: {} },
         SaoPedroPessoaService,
         SaoPedroAuthService,
         SaoPedroContatoService,

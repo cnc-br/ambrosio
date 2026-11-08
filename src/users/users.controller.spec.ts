@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { PessoaService } from 'src/pessoa/pessoa.service.js';
+import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { EstadoCivilService } from 'src/configuracoes/estado-civil/estado-civil.service.js';
 import { EscolaridadeService } from 'src/configuracoes/escolaridade/escolaridade.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
@@ -31,6 +32,7 @@ describe('UsersController', () => {
         JwtService,
         CaslAbilityService,
         PessoaService,
+        { provide: ComunidadeService, useValue: {} },
         EstadoCivilService,
         EscolaridadeService,
         SaoPedroContatoService,

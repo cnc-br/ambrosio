@@ -295,8 +295,11 @@ export class ComunidadeService extends BaseService {
    * Garante que a comunidade existe e está dentro do escopo de `update` do usuário
    * (paróquias vinculadas em `usuarioParoquia`), distinguindo 404 (inexistente)
    * de 403 (existente fora do escopo).
+   *
+   * É pública para permitir reuso no fluxo de cadastro de pessoa vinculada a uma
+   * comunidade (validação antes de qualquer escrita).
    */
-  private async validarComunidadeDentroDoEscopoDeAtualizacao(id: number) {
+  async validarComunidadeDentroDoEscopoDeAtualizacao(id: number) {
     const updateScope = accessibleBy(
       this.abilityService.ability,
       'update',
