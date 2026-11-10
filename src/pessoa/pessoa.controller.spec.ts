@@ -152,9 +152,8 @@ describe('PessoaController', () => {
     expect(result).toEqual(contato);
   });
 
-  it('deve delegar a atualização de contato recebendo o usuário autenticado', async () => {
+  it('deve delegar a atualização de contato para o ContatoService', async () => {
     const dto = { telefone: '11987654321' };
-    const usuario = { id: 'usuario-1', role: 'ADMIN' };
     const contato = {
       id: 500,
       pessoaId: 1,
@@ -164,12 +163,7 @@ describe('PessoaController', () => {
     };
     contatoServiceMock.update.mockResolvedValue(contato);
 
-    const result = await controller.updateContato(
-      '1',
-      'id-contato-externo',
-      dto,
-      usuario as never,
-    );
+    const result = await controller.updateContato('1', 'id-contato-externo', dto);
 
     expect(contatoServiceMock.update).toHaveBeenCalledWith(
       1,

@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   HttpStatus,
-  Logger,
   ParseIntPipe,
   Query,
   UseGuards,
@@ -33,15 +32,11 @@ import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { CasalService } from './casal/casal.service.js';
 import { ContatoService } from './contato/contato.service.js';
-import { CurrentUser } from 'src/auth/current-user.decorator.js';
-import type { user } from 'src/prisma/generated-client.js';
 
 @ApiTags('Pessoas')
 @UseGuards(AuthGuard, RoleGuard)
 @Controller('pessoa')
 export class PessoaController {
-  private readonly logger = new Logger(PessoaController.name);
-
   constructor(
     private readonly pessoaService: PessoaService,
     private readonly casalService: CasalService,
@@ -170,13 +165,7 @@ export class PessoaController {
     @Param('id') id: string,
     @Param('contatoId') contatoId: string,
     @Body() updatePessoaContatoDto: UpdatePessoaContatoDto,
-    @CurrentUser() user: user,
   ) {
-    this.logger.debug(
-      `Atualizando contato ${contatoId} da pessoa ${id} ` +
-        `(usuário ${user?.id}, papel ${user?.role})`,
-    );
-
     return this.contatoService.update(
       +id,
       contatoId,
