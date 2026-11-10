@@ -14,6 +14,7 @@ describe('ContatoService', () => {
   };
   const saoPedroContatoServiceMock = {
     createExternalContato: vi.fn(),
+    updateExternalContato: vi.fn(),
   };
   const abilityMock = {
     ability: { can: vi.fn() },
@@ -36,6 +37,9 @@ describe('ContatoService', () => {
       externalId: 'uuid-pessoa',
     });
     saoPedroContatoServiceMock.createExternalContato.mockResolvedValue(
+      contatoCriado,
+    );
+    saoPedroContatoServiceMock.updateExternalContato.mockResolvedValue(
       contatoCriado,
     );
 
@@ -103,6 +107,58 @@ describe('ContatoService', () => {
 
     expect(
       saoPedroContatoServiceMock.createExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('deve lançar ForbiddenException sem permissão de update pessoa', async () => {
+    abilityMock.ability.can.mockImplementation((action: string) =>
+      action !== 'update',
+    );
+
+    await expect(
+      service.update(1, 'contato-externo', { telefone: '11999999999' }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('deve resolver a pessoa pelo id e delegar a atualização à São Pedro pelo id do contato externo', async () => {
+    const dto = {
+      telefone: '11987654321',
+      email: 'contato@exemplo.com',
+    };
+
+    const result = await service.update(1, 'contato-externo', dto);
+
+    expect(prismaMock.pessoa.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: { id: 1 },
+      select: { id: true },
+    });
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).toHaveBeenCalledWith('contato-externo', dto);
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).not.toHaveBeenCalled();
+    expect(result).toEqual(contatoCriado);
+  });
+
+  it('deve propagar erro de pessoa inexistente (P2025) na atualização sem chamar o serviço externo', async () => {
+    const notFoundError = Object.assign(
+      new Error('O registro de Pessoa não foi encontrado.'),
+      { code: 'P2025' },
+    );
+    prismaMock.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
+
+    await expect(
+      service.update(999, 'contato-externo', { telefone: '11999999999' }),
+    ).rejects.toBe(notFoundError);
+
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
     ).not.toHaveBeenCalled();
   });
 });

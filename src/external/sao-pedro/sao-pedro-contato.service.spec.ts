@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
+import { BadRequestException } from '@nestjs/common';
 import { of } from 'rxjs';
 import { PessoaContato } from 'neocatecumenal';
 import { SaoPedroContatoService } from './sao-pedro-contato.service.js';
@@ -19,6 +20,7 @@ describe('SaoPedroContatoService', () => {
   const httpServiceMock = {
     post: vi.fn(),
     get: vi.fn(),
+    patch: vi.fn(),
   };
   const abilityMock = {
     ability: { can: vi.fn() },
@@ -104,6 +106,100 @@ describe('SaoPedroContatoService', () => {
       expect.anything(),
     );
   });
+
+  it('deve atualizar o contato externo via PATCH pelo id do contato e retornar response.data normalizado', async () => {
+    const updated: ExternalContatoResponse = {
+      id: 42,
+      pessoa_id: 2,
+      tipo_telefone: 'COMERCIAL',
+      telefone: '1133334444',
+      email: 'novo@exemplo.com',
+      contato_principal: false,
+    };
+    httpServiceMock.patch.mockReturnValue(of({ data: updated }));
+
+    const result = await service.updateExternalContato('42', {
+      tipoTelefone: 'COMERCIAL',
+      telefone: '1133334444',
+      email: 'novo@exemplo.com',
+      contatoPrincipal: false,
+    });
+
+    expect(httpServiceMock.patch).toHaveBeenCalledWith(
+      `${process.env.SAO_PEDRO_API_URL}/api/contatos/42/`,
+      {
+        tipo_telefone: 'COMERCIAL',
+        telefone: '1133334444',
+        email: 'novo@exemplo.com',
+        contato_principal: false,
+      },
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token-mock',
+          'Content-Type': 'application/json',
+        }),
+      }),
+    );
+    expect(result).toEqual({
+      id: 42,
+      pessoaId: 2,
+      tipoTelefone: 'COMERCIAL',
+      telefone: '1133334444',
+      email: 'novo@exemplo.com',
+      contatoPrincipal: false,
+    });
+  });
+
+  it('deve enviar apenas os campos informados no PATCH de contato', async () => {
+    httpServiceMock.patch.mockReturnValue(
+      of({
+        data: {
+          id: 42,
+          pessoa_id: 2,
+          tipo_telefone: 'COMERCIAL',
+          telefone: '1133334444',
+          contato_principal: true,
+        } as ExternalContatoResponse,
+      }),
+    );
+
+    await service.updateExternalContato('42', {
+      telefone: '1133334444',
+    });
+
+    expect(httpServiceMock.patch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/contatos/42/'),
+      { telefone: '1133334444' },
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    '../api/pessoas',
+    '9/../comunidade',
+    '9%2F..%2Fapi',
+    '../contatos/42',
+    '42.',
+    '-1',
+    '0',
+    'abc',
+    '',
+    ' 42',
+    '42 ',
+    '42\n',
+  ])(
+    'deve rejeitar contatoId inválido %j sem buscar token nem chamar a São Pedro',
+    async (contatoId) => {
+      await expect(
+        service.updateExternalContato(contatoId, {
+          telefone: '11999999999',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(authServiceMock.executeAuthenticatedRequest).not.toHaveBeenCalled();
+      expect(httpServiceMock.patch).not.toHaveBeenCalled();
+    },
+  );
 
   it('deve buscar os contatos da pessoa (resposta com envelope data) e devolver em camelCase', async () => {
     const contatos: ExternalContatoResponse[] = [

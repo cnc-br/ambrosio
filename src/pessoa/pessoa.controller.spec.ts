@@ -33,7 +33,7 @@ describe('PessoaController', () => {
   let jwtService: JwtService;
   let abilityService: CaslAbilityService;
 
-  const contatoServiceMock = { create: vi.fn() };
+  const contatoServiceMock = { create: vi.fn(), update: vi.fn() };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -152,10 +152,31 @@ describe('PessoaController', () => {
     expect(result).toEqual(contato);
   });
 
+  it('deve delegar a atualização de contato para o ContatoService', async () => {
+    const dto = { telefone: '11987654321' };
+    const contato = {
+      id: 500,
+      pessoaId: 1,
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
+      contatoPrincipal: true,
+    };
+    contatoServiceMock.update.mockResolvedValue(contato);
+
+    const result = await controller.updateContato('1', 'id-contato-externo', dto);
+
+    expect(contatoServiceMock.update).toHaveBeenCalledWith(
+      1,
+      'id-contato-externo',
+      dto,
+    );
+    expect(result).toEqual(contato);
+  });
+
   it('repassa o comunidadeId ao PessoaService no create', async () => {
     const dto = { nome: 'Maria', situacaoReligiosa: { id: 1 } };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createSpy = vi
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn((controller as any).pessoaService, 'create')
       .mockResolvedValue({ id: 1 } as never);
 

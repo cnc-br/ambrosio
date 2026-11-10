@@ -27,6 +27,7 @@ import {
 import { SexoQueryParamDto } from './dto/sexo.dto.js';
 import { CreateCasalDto } from './dto/create-casal.dto.js';
 import { CreatePessoaContatoDto } from './dto/create-pessoa-contato.dto.js';
+import { UpdatePessoaContatoDto } from './dto/update-pessoa-contato.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { CasalService } from './casal/casal.service.js';
@@ -141,6 +142,35 @@ export class PessoaController {
     @Body() createPessoaContatoDto: CreatePessoaContatoDto,
   ) {
     return this.contatoService.create(+id, createPessoaContatoDto);
+  }
+
+  @Patch(':id/contato/:contatoId')
+  @ApiOkResponse({ description: 'Contato atualizado com sucesso.' })
+  @ApiBadRequestResponse({ description: 'Payload inválido' })
+  @ApiNotFoundResponse({ description: 'Pessoa não encontrada' })
+  @ApiBody({
+    description: 'Dados para atualização parcial de um contato da pessoa',
+    examples: {
+      contato: {
+        summary: 'Contato parcial',
+        value: {
+          telefone: '11987654321',
+          email: 'contato@exemplo.com',
+          contatoPrincipal: false,
+        },
+      },
+    },
+  })
+  updateContato(
+    @Param('id') id: string,
+    @Param('contatoId') contatoId: string,
+    @Body() updatePessoaContatoDto: UpdatePessoaContatoDto,
+  ) {
+    return this.contatoService.update(
+      +id,
+      contatoId,
+      updatePessoaContatoDto,
+    );
   }
 
   @Get()
