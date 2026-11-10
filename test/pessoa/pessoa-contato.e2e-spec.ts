@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import request from 'supertest';
 import { setupTestModule } from '../test-setup.js';
 import { pessoaMock } from '../mocks/pessoa-mock.js';
@@ -263,5 +263,171 @@ describe('PessoaContatoController (e2e)', () => {
       pessoaUuid,
       segundoPayload,
     );
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 401 | nao pode atualizar contato se nao tiver autenticado`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .send({ telefone: '11999999999' })
+      .expect(401)
+      .expect((res) => {
+        expect(res.body.message).toBe('Invalid or missing token');
+        expect(res.body.error).toBe('Unauthorized');
+        expect(res.body.statusCode).toBe(401);
+      });
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 403 | nao pode atualizar contato sem permissao`, async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'ronaldinho@admin.com', password: 'admin' });
+
+    const noPermissionToken = loginResponse.body.data.access_token;
+
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .set('Authorization', `Bearer ${noPermissionToken}`)
+      .send({ telefone: '11999999999' })
+      .expect(403)
+      .expect((res) => {
+        expect(res.body.message).toBe(
+          'Você não tem permissão para update pessoa',
+        );
+        expect(res.body.error).toBe('Forbidden');
+        expect(res.body.statusCode).toBe(403);
+      })
+      .expect(() => {
+        expect(
+          mockSaoPedroContatoService.updateExternalContato,
+        ).not.toHaveBeenCalled();
+      });
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 404 | nao pode atualizar contato de pessoa inexistente`, async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/999999/contato/9001`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ telefone: '11999999999' });
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe(
+      `O registro de 'Pessoa' não foi encontrado.`,
+    );
+    expect(response.body.statusCode).toBe(404);
+    expect(
+      mockSaoPedroContatoService.updateExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 400 | nao pode atualizar contato com email invalido`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'email-invalido' })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.error).toBe('Bad Request');
+        expect(res.body.statusCode).toBe(400);
+      });
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 400 | nao pode atualizar contato com tipoTelefone fora do enum`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipoTelefone: 'FAX' })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.error).toBe('Bad Request');
+        expect(res.body.statusCode).toBe(400);
+        expect(JSON.stringify(res.body.message)).toContain('tipoTelefone');
+      });
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 400 | nao pode atualizar contato com contatoPrincipal de tipo invalido`, () => {
+    return request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contatoPrincipal: 'true' })
+      .expect(400)
+      .expect((res) => {
+        expect(res.body.error).toBe('Bad Request');
+        expect(res.body.statusCode).toBe(400);
+      });
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 200 | deve atualizar contato com todos os campos via Sao Pedro`, async () => {
+    const payload = {
+      tipoTelefone: 'COMERCIAL',
+      telefone: '1133334444',
+      email: 'novo@exemplo.com',
+      observacao: 'Contato atualizado',
+      contatoPrincipal: false,
+    };
+    const contatoAtualizado = {
+      id: 9001,
+      pessoaId: 999,
+      ...payload,
+    };
+
+    mockSaoPedroContatoService.updateExternalContato.mockResolvedValue(
+      contatoAtualizado,
+    );
+
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual(contatoAtualizado);
+    expect(
+      mockSaoPedroContatoService.updateExternalContato,
+    ).toHaveBeenCalledWith('9001', payload);
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 200 | deve atualizar parcialmente enviando apenas os campos informados`, async () => {
+    const payload = { telefone: '11987654321' };
+    const contatoAtualizado = {
+      id: 9001,
+      pessoaId: 999,
+      tipoTelefone: 'CELULAR',
+      telefone: '11987654321',
+      contatoPrincipal: true,
+    };
+
+    mockSaoPedroContatoService.updateExternalContato.mockResolvedValue(
+      contatoAtualizado,
+    );
+
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9001`)
+      .set('Authorization', `Bearer ${token}`)
+      .send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual(contatoAtualizado);
+    expect(
+      mockSaoPedroContatoService.updateExternalContato,
+    ).toHaveBeenCalledWith('9001', payload);
+  });
+
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 404 | propaga o 404 da Sao Pedro quando o contato externo nao existe`, async () => {
+    mockSaoPedroContatoService.updateExternalContato.mockRejectedValue(
+      new NotFoundException('Contato não encontrado.'),
+    );
+
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaId}/contato/9999`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ telefone: '11999999999' });
+
+    expect(response.status).toBe(404);
+    expect(response.body.statusCode).toBe(404);
+    expect(
+      mockSaoPedroContatoService.updateExternalContato,
+    ).toHaveBeenCalledWith('9999', {
+      telefone: '11999999999',
+    });
   });
 });

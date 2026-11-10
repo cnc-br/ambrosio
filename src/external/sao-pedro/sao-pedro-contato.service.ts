@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { PessoaContato } from 'neocatecumenal';
 import { SaoPedroAuthService } from './sao-pedro-auth.service.js';
 import { CreatePessoaContatoDto } from 'src/pessoa/dto/create-pessoa-contato.dto.js';
+import { UpdatePessoaContatoDto } from 'src/pessoa/dto/update-pessoa-contato.dto.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { CreateContatoMapper } from './mapper/create-contato.mapper.js';
@@ -49,6 +50,33 @@ export class SaoPedroContatoService extends BaseService {
 
       return ContatoResponseMapper.toDomain(response.data);
     }, `criação de contato externo (pessoa UUID: ${pessoaUuid})`);
+  }
+
+  async updateExternalContato(
+    contatoId: string,
+    updatePessoaContatoDto: UpdatePessoaContatoDto,
+  ): Promise<PessoaContato> {
+    const payload = CreateContatoMapper.toExternal(updatePessoaContatoDto);
+    this.logger.log(`Atualizando contato externo ${contatoId}`);
+
+    return this.authService.executeAuthenticatedRequest(async (token: string) => {
+      const response = await firstValueFrom(
+        this.httpService.patch<ExternalContatoResponse>(
+          `${process.env.SAO_PEDRO_API_URL}/api/contatos/${contatoId}/`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      );
+
+      this.logger.log(`Contato externo ${contatoId} atualizado com sucesso`);
+
+      return ContatoResponseMapper.toDomain(response.data);
+    }, `atualização de contato externo (contato ID: ${contatoId})`);
   }
 
   async findExternalContatos(pessoaUuid: string): Promise<PessoaContato[]> {
