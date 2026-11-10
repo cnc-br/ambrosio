@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpService } from '@nestjs/axios';
+import { BadRequestException } from '@nestjs/common';
 import { of } from 'rxjs';
 import { PessoaContato } from 'neocatecumenal';
 import { SaoPedroContatoService } from './sao-pedro-contato.service.js';
@@ -172,6 +173,33 @@ describe('SaoPedroContatoService', () => {
       expect.anything(),
     );
   });
+
+  it.each([
+    '../api/pessoas',
+    '9/../comunidade',
+    '9%2F..%2Fapi',
+    '../contatos/42',
+    '42.',
+    '-1',
+    '0',
+    'abc',
+    '',
+    ' 42',
+    '42 ',
+    '42\n',
+  ])(
+    'deve rejeitar contatoId inválido %j sem buscar token nem chamar a São Pedro',
+    async (contatoId) => {
+      await expect(
+        service.updateExternalContato(contatoId, {
+          telefone: '11999999999',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(authServiceMock.executeAuthenticatedRequest).not.toHaveBeenCalled();
+      expect(httpServiceMock.patch).not.toHaveBeenCalled();
+    },
+  );
 
   it('deve buscar os contatos da pessoa (resposta com envelope data) e devolver em camelCase', async () => {
     const contatos: ExternalContatoResponse[] = [

@@ -121,6 +121,32 @@ export class SaoPedroAuthService {
   }
 
   /**
+   * Reconstrói o erro da São Pedro preservando status e corpo/mensagem upstream,
+   * em vez de mascarar tudo com uma mensagem genérica.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private buildUpstreamException(error: any, operation: string): HttpException {
+    const status = error?.response?.status ?? error?.status ?? 500;
+    const data = error?.response?.data;
+
+    if (data !== undefined && data !== null) {
+      const response =
+        typeof data === 'object' && !Array.isArray(data)
+          ? { statusCode: status, ...data }
+          : { statusCode: status, message: data };
+
+      return new HttpException(response, status);
+    }
+
+    const message =
+      typeof error?.message === 'string' && error.message.length > 0
+        ? error.message
+        : `Erro ao executar ${operation}`;
+
+    return new HttpException({ statusCode: status, message }, status);
+  }
+
+  /**
    * Método centralizado para fazer requisições autenticadas com retry automático
    */
   async executeAuthenticatedRequest<T>(
@@ -146,19 +172,13 @@ export class SaoPedroAuthService {
             `Falha em ${operation} após renovação de token:`,
             retryError.message,
           );
-          throw new HttpException(
-            `Erro ao executar ${operation}`,
-            retryError.response?.status || 500,
-          );
+          throw this.buildUpstreamException(retryError, operation);
         }
       }
 
-      // Para outros erros, propaga diretamente
+      // Para outros erros, propaga diretamente preservando os detalhes upstream
       this.logger.error(`Erro em ${operation}:`, error.message);
-      throw new HttpException(
-        `Erro ao executar ${operation}`,
-        error.response?.status || 500,
-      );
+      throw this.buildUpstreamException(error, operation);
     }
   }
 }

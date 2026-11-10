@@ -152,8 +152,9 @@ describe('PessoaController', () => {
     expect(result).toEqual(contato);
   });
 
-  it('deve delegar a atualização de contato para o ContatoService', async () => {
+  it('deve delegar a atualização de contato recebendo o usuário autenticado', async () => {
     const dto = { telefone: '11987654321' };
+    const usuario = { id: 'usuario-1', role: 'ADMIN' };
     const contato = {
       id: 500,
       pessoaId: 1,
@@ -163,7 +164,12 @@ describe('PessoaController', () => {
     };
     contatoServiceMock.update.mockResolvedValue(contato);
 
-    const result = await controller.updateContato('1', 'id-contato-externo', dto);
+    const result = await controller.updateContato(
+      '1',
+      'id-contato-externo',
+      dto,
+      usuario as never,
+    );
 
     expect(contatoServiceMock.update).toHaveBeenCalledWith(
       1,
@@ -175,8 +181,8 @@ describe('PessoaController', () => {
 
   it('repassa o comunidadeId ao PessoaService no create', async () => {
     const dto = { nome: 'Maria', situacaoReligiosa: { id: 1 } };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const createSpy = vi
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn((controller as any).pessoaService, 'create')
       .mockResolvedValue({ id: 1 } as never);
 
