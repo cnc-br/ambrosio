@@ -21,6 +21,8 @@ describe('PessoaCreateController (e2e)', () => {
   let tokenSecretariaCnc = '';
   let tokenSecretariaSemParoquia = '';
   let pessoaParaAtualizar = 0;
+  let adminUserId = '';
+  let secretariaCncUserId = '';
 
   const login = async (email: string): Promise<string> => {
     const response = await request(app.getHttpServer())
@@ -80,6 +82,17 @@ describe('PessoaCreateController (e2e)', () => {
     tokenSecretariaSemParoquia = await login(
       'secretaria-sem-paroquia-pessoa@admin.com',
     );
+
+    adminUserId = (
+      await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@admin.com' },
+      })
+    ).id;
+    secretariaCncUserId = (
+      await prisma.user.findUniqueOrThrow({
+        where: { email: 'secretaria@admin.com' },
+      })
+    ).id;
 
     // Fixture de pessoa para os casos de atualização
     const cpfFixture = '10000000108';
@@ -190,12 +203,22 @@ describe('PessoaCreateController (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({
         ...pessoaMock,
+        cadastradoPorId: 'usuario-forjado',
+        atualizadoPorId: 'usuario-forjado',
       });
 
     expect(response.status).toBe(201);
     expect(response.body.data).toHaveProperty('id');
     expect(response.body.data).toHaveProperty('nome', 'Carmem Hernandez Mock');
     expect(response.body.data).toHaveProperty('cpf', pessoaMock.cpf);
+    expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+    expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+    const pessoaCriada = await prisma.pessoa.findUniqueOrThrow({
+      where: { id: response.body.data.id },
+    });
+    expect(pessoaCriada.cadastradoPorId).toBe(adminUserId);
+    expect(pessoaCriada.atualizadoPorId).toBe(adminUserId);
     // expect(response.body.data).toHaveProperty(
     //   'dataNascimento',
     //   pessoaMock.dataNascimento,
@@ -299,6 +322,13 @@ describe('PessoaCreateController (e2e)', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data).toHaveProperty('id', pessoaParaAtualizar);
+    expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+    expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+    const pessoaAtualizada = await prisma.pessoa.findUniqueOrThrow({
+      where: { id: pessoaParaAtualizar },
+    });
+    expect(pessoaAtualizada.atualizadoPorId).toBe(secretariaCncUserId);
   });
 
   it(`/${principal}/:id (PATCH) - 200 | ADMIN atualiza pessoa`, async () => {
@@ -309,6 +339,11 @@ describe('PessoaCreateController (e2e)', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data).toHaveProperty('id', pessoaParaAtualizar);
+
+    const pessoaAtualizada = await prisma.pessoa.findUniqueOrThrow({
+      where: { id: pessoaParaAtualizar },
+    });
+    expect(pessoaAtualizada.atualizadoPorId).toBe(adminUserId);
   });
 
   it(`/${principal}/999999 (PATCH) - 404 | nao atualiza pessoa inexistente`, () => {

@@ -46,6 +46,7 @@ describe('PessoaService', () => {
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
     },
     pessoaCasal: {
       findFirst: vi.fn(),
@@ -219,7 +220,7 @@ describe('PessoaService', () => {
       role: UserRoleEnum.NAO_IDENTIFICADO,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
 
-    await expect(service.update(1, {})).rejects.toThrow(
+    await expect(service.update(1, {}, autorId)).rejects.toThrow(
       'Você não tem permissão para update pessoa',
     );
     expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
@@ -241,7 +242,7 @@ describe('PessoaService', () => {
       cpf: '12345678901',
     } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
 
-    await service.update(1, { nome: 'Novo Nome' });
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
 
     expect(saoPedroPessoaServiceMock.getExternalPessoaByCpf).not.toHaveBeenCalled();
     expect(
@@ -257,7 +258,7 @@ describe('PessoaService', () => {
       cpf: '12345678901',
     } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
 
-    await service.update(1, { cpf: '12345678901' });
+    await service.update(1, { cpf: '12345678901' }, autorId);
 
     expect(saoPedroPessoaServiceMock.getExternalPessoaByCpf).not.toHaveBeenCalled();
     expect(
@@ -274,7 +275,7 @@ describe('PessoaService', () => {
     } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
     saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(null);
 
-    await service.update(1, { cpf: '52998224725' });
+    await service.update(1, { cpf: '52998224725' }, autorId);
 
     expect(
       saoPedroPessoaServiceMock.getExternalPessoaByCpf,
@@ -292,7 +293,9 @@ describe('PessoaService', () => {
       cpf: '12345678901',
     } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
 
-    await expect(service.update(1, { cpf: '52998224724' })).rejects.toThrow(
+    await expect(
+      service.update(1, { cpf: '52998224724' }, autorId),
+    ).rejects.toThrow(
       BadRequestException,
     );
     expect(saoPedroPessoaServiceMock.getExternalPessoaByCpf).not.toHaveBeenCalled();
@@ -313,12 +316,69 @@ describe('PessoaService', () => {
     );
     prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
 
-    await expect(service.update(1, { cpf: '52998224725' })).rejects.toThrow(
+    await expect(
+      service.update(1, { cpf: '52998224725' }, autorId),
+    ).rejects.toThrow(
       ConflictException,
     );
     expect(
       saoPedroPessoaServiceMock.updateExternalPessoa,
     ).not.toHaveBeenCalled();
+  });
+
+  it('update grava o usuário autenticado em atualizadoPorId após sucesso', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockResolvedValue({});
+
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
+
+    expect(prismaMock.pessoa.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { atualizadoPorId: autorId },
+    });
+  });
+
+  it('update não grava autoria quando a atualização externa falha', async () => {
+    setAdminAbility();
+    vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockRejectedValue(
+      new Error('falha externa'),
+    );
+
+    await expect(
+      service.update(1, { nome: 'Novo Nome' }, autorId),
+    ).rejects.toThrow('falha externa');
+
+    expect(prismaMock.pessoa.update).not.toHaveBeenCalled();
+  });
+
+  it('create ignora autoria enviada no payload', async () => {
+    prepararCriacao();
+    const dtoComAutoria = {
+      ...createPessoaDto,
+      cadastradoPorId: 'usuario-forjado',
+      atualizadoPorId: 'usuario-forjado',
+    } as unknown as Parameters<PessoaService['create']>[0];
+
+    await service.create(dtoComAutoria, autorId);
+
+    expect(prismaMock.pessoa.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cadastradoPorId: autorId,
+          atualizadoPorId: autorId,
+        }),
+      }),
+    );
   });
 
   it('findAll nao busca contatos e omite o campo contatos na listagem', async () => {
@@ -347,6 +407,8 @@ describe('PessoaService', () => {
     situacaoReligiosa: { id: 1, descricao: 'LEIGO' },
   } as unknown as Parameters<PessoaService['create']>[0];
 
+  const autorId = 'usuario-autor';
+
   const prepararCriacao = () => {
     setAdminAbility();
     vi.mocked(situacaoReligiosaService.findOne).mockResolvedValue({
@@ -365,7 +427,7 @@ describe('PessoaService', () => {
       new ForbiddenException('Você não tem permissão'),
     );
 
-    await expect(service.create(createPessoaDto, 10)).rejects.toThrow(
+    await expect(service.create(createPessoaDto, autorId, 10)).rejects.toThrow(
       ForbiddenException,
     );
 
@@ -385,7 +447,7 @@ describe('PessoaService', () => {
     );
     comunidadeServiceMock.adicionarPessoa.mockResolvedValue({});
 
-    const result = await service.create(createPessoaDto, 10);
+    const result = await service.create(createPessoaDto, autorId, 10);
 
     expect(
       comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao,
@@ -393,7 +455,14 @@ describe('PessoaService', () => {
     expect(
       saoPedroPessoaServiceMock.createExternalPessoa,
     ).toHaveBeenCalledWith(createPessoaDto);
-    expect(prismaMock.pessoa.create).toHaveBeenCalled();
+    expect(prismaMock.pessoa.create).toHaveBeenCalledWith({
+      data: {
+        externalId: externalPessoa.externalId,
+        situacaoReligiosaId: 1,
+        cadastradoPorId: autorId,
+        atualizadoPorId: autorId,
+      },
+    });
     expect(comunidadeServiceMock.adicionarPessoa).toHaveBeenCalledWith(10, 1);
     expect(result.id).toBe(1);
   });
@@ -406,7 +475,7 @@ describe('PessoaService', () => {
     const erroVinculo = new Error('Falha ao vincular');
     comunidadeServiceMock.adicionarPessoa.mockRejectedValue(erroVinculo);
 
-    await expect(service.create(createPessoaDto, 10)).rejects.toThrow(
+    await expect(service.create(createPessoaDto, autorId, 10)).rejects.toThrow(
       'Falha ao vincular',
     );
 
@@ -418,7 +487,7 @@ describe('PessoaService', () => {
   it('create sem comunidadeId não valida vínculo nem adiciona à comunidade', async () => {
     prepararCriacao();
 
-    const result = await service.create(createPessoaDto);
+    const result = await service.create(createPessoaDto, autorId);
 
     expect(
       comunidadeServiceMock.validarComunidadeDentroDoEscopoDeAtualizacao,

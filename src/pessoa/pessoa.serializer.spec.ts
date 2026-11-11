@@ -70,4 +70,18 @@ describe('serializePessoaResponse', () => {
 
     expect(result.contatos).toEqual([]);
   });
+
+  it('não expõe os campos de autoria do registro local', () => {
+    const result = serializePessoaResponse(
+      {
+        ...pessoaLocalMock(),
+        cadastradoPorId: 'usuario-autor',
+        atualizadoPorId: 'usuario-editor',
+      },
+      externalMock(),
+    );
+
+    expect(result).not.toHaveProperty('cadastradoPorId');
+    expect(result).not.toHaveProperty('atualizadoPorId');
+  });
 });
