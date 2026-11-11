@@ -72,10 +72,16 @@ model pessoa {
   casamentosComoMulher pessoaCasal[]      @relation("Mulher")
   enderecos            pessoaEndereco[]
   user                 user[]
+  cadastradoPorId      String?
+  atualizadoPorId      String?
+  cadastradoPor        user?              @relation("PessoaCadastradaPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor        user?              @relation("PessoaAtualizadaPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @default(now()) @updatedAt
 
   @@index([externalId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model situacaoReligiosa {
@@ -235,6 +241,8 @@ model user {
   updatedAt            DateTime          @updatedAt
   pessoaId             Int?
   pessoa               pessoa?           @relation(fields: [pessoaId], references: [id])
+  pessoasCadastradas   pessoa[]          @relation("PessoaCadastradaPor")
+  pessoasAtualizadas   pessoa[]          @relation("PessoaAtualizadaPor")
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
   usuarioParoquias     usuarioParoquia[]

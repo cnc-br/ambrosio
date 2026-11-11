@@ -173,16 +173,30 @@ describe('PessoaController', () => {
     expect(result).toEqual(contato);
   });
 
-  it('repassa o comunidadeId ao PessoaService no create', async () => {
+  it('repassa o comunidadeId e o usuário autenticado ao PessoaService no create', async () => {
     const dto = { nome: 'Maria', situacaoReligiosa: { id: 1 } };
+    const autorId = 'usuario-autor';
     const createSpy = vi
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .spyOn((controller as any).pessoaService, 'create')
       .mockResolvedValue({ id: 1 } as never);
 
-    await controller.create(dto as never, 10);
+    await controller.create(dto as never, autorId, 10);
 
-    expect(createSpy).toHaveBeenCalledWith(dto, 10);
+    expect(createSpy).toHaveBeenCalledWith(dto, autorId, 10);
+  });
+
+  it('repassa o usuário autenticado ao PessoaService no update', async () => {
+    const dto = { nome: 'Maria' };
+    const autorId = 'usuario-editor';
+    const updateSpy = vi
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .spyOn((controller as any).pessoaService, 'update')
+      .mockResolvedValue({ id: 1 } as never);
+
+    await controller.update('1', dto as never, autorId);
+
+    expect(updateSpy).toHaveBeenCalledWith(1, dto, autorId);
   });
 
   it('documenta o 406 e o query param comunidadeId no Swagger do POST /pessoa', () => {

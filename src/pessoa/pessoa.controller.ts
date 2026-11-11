@@ -30,6 +30,7 @@ import { CreatePessoaContatoDto } from './dto/create-pessoa-contato.dto.js';
 import { UpdatePessoaContatoDto } from './dto/update-pessoa-contato.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 import { CasalService } from './casal/casal.service.js';
 import { ContatoService } from './contato/contato.service.js';
 
@@ -85,6 +86,7 @@ export class PessoaController {
   })
   create(
     @Body() createPessoaDto: CreatePessoaDto,
+    @CurrentUser('id') userId: string,
     @Query(
       'comunidadeId',
       new ParseIntPipe({
@@ -94,7 +96,7 @@ export class PessoaController {
     )
     comunidadeId?: number,
   ) {
-    return this.pessoaService.create(createPessoaDto, comunidadeId);
+    return this.pessoaService.create(createPessoaDto, userId, comunidadeId);
   }
 
   @Post('/casal')
@@ -210,7 +212,11 @@ export class PessoaController {
 
   @Patch(':id')
   @ApiOkResponse({ description: 'Atualiza uma pessoa' })
-  update(@Param('id') id: string, @Body() updatePessoaDto: UpdatePessoaDto) {
-    return this.pessoaService.update(+id, updatePessoaDto);
+  update(
+    @Param('id') id: string,
+    @Body() updatePessoaDto: UpdatePessoaDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.pessoaService.update(+id, updatePessoaDto, userId);
   }
 }

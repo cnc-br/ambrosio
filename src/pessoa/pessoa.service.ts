@@ -31,7 +31,11 @@ export class PessoaService extends BaseService {
     super(abilityService);
   }
 
-  async create(createPessoaDto: CreatePessoaDto, comunidadeId?: number) {
+  async create(
+    createPessoaDto: CreatePessoaDto,
+    userId: string,
+    comunidadeId?: number,
+  ) {
     this.validateCreateAbility('pessoa');
 
     const situacaoReligiosa = await this.situacaoReligiosaService.findOne(
@@ -46,6 +50,7 @@ export class PessoaService extends BaseService {
     const pessoa = await this.criarPessoaCompleta(
       createPessoaDto,
       situacaoReligiosa,
+      userId,
     );
 
     if (comunidadeId !== undefined) {
@@ -72,6 +77,7 @@ export class PessoaService extends BaseService {
   private async criarPessoaCompleta(
     createPessoaDto: CreatePessoaDto,
     situacaoReligiosa: situacaoReligiosa,
+    userId: string,
   ) {
     try {
       const external =
@@ -81,6 +87,8 @@ export class PessoaService extends BaseService {
         data: {
           externalId: external.externalId,
           situacaoReligiosaId: situacaoReligiosa.id,
+          cadastradoPorId: userId,
+          atualizadoPorId: userId,
         },
       });
       this.logger.log(
@@ -232,7 +240,11 @@ export class PessoaService extends BaseService {
     return serializePessoaResponse(pessoa, externalPessoa, conjugue, contatos);
   }
 
-  async update(id: number, updatePessoaDto: UpdatePessoaDto): Promise<Pessoa> {
+  async update(
+    id: number,
+    updatePessoaDto: UpdatePessoaDto,
+    userId: string,
+  ): Promise<Pessoa> {
     this.validateUpdateAbility('pessoa');
 
     const pessoa = await this.findOne(id);
@@ -261,6 +273,14 @@ export class PessoaService extends BaseService {
       pessoa.externalId,
       updatePessoaDto,
     );
+
+    await this.prisma.pessoa.update({
+      where: { id },
+      data: {
+        atualizadoPorId: userId,
+      },
+    });
+
     return pessoa;
   }
 
