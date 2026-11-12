@@ -269,6 +269,7 @@ export class ComunidadeService extends BaseService {
   async adicionarPessoa(comunidadeId: number, pessoaId: number) {
     this.validateUpdateAbility('comunidade');
     await this.validarComunidadeDentroDoEscopoDeAtualizacao(comunidadeId);
+    await this.validarPessoaDentroDoEscopoDeAtualizacao(pessoaId);
     return this.prisma.comunidadePessoa.create({
       data: {
         dataEntrada: new Date(),
@@ -317,6 +318,33 @@ export class ComunidadeService extends BaseService {
     }
 
     return comunidadeNoEscopo;
+  }
+
+  /**
+   * Garante que a pessoa existe e está dentro do escopo de `update` do usuário
+   * (paróquias vinculadas em `usuarioParoquia`), distinguindo 404 (inexistente)
+   * de 403 (existente fora do escopo). Evita que o vínculo criado por
+   * `adicionarPessoa` conceda autorização de edição sobre uma pessoa que já
+   * estava fora do escopo.
+   */
+  private async validarPessoaDentroDoEscopoDeAtualizacao(pessoaId: number) {
+    const updateScope = accessibleBy(
+      this.abilityService.ability,
+      'update',
+    ).pessoa;
+
+    const pessoaNoEscopo = await this.prisma.pessoa.findFirst({
+      where: { AND: [{ id: pessoaId }, updateScope] },
+    });
+
+    if (!pessoaNoEscopo) {
+      await this.prisma.pessoa.findUniqueOrThrow({ where: { id: pessoaId } });
+      throw new ForbiddenException(
+        'Você não tem permissão para atualizar pessoa fora das suas paróquias.',
+      );
+    }
+
+    return pessoaNoEscopo;
   }
 
   /**

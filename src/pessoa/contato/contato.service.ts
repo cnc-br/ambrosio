@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { CreatePessoaContatoDto } from '../dto/create-pessoa-contato.dto.js';
@@ -37,7 +37,22 @@ export class ContatoService extends BaseService {
   ) {
     this.validateUpdateAbility('pessoa');
 
-    await this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(pessoaId);
+    const pessoa =
+      await this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(
+        pessoaId,
+      );
+
+    const contatos = await this.saoPedroContatoService.findExternalContatos(
+      pessoa.externalId,
+    );
+
+    const contato = contatos.find((c) => String(c.id) === contatoId);
+
+    if (!contato) {
+      throw new NotFoundException(
+        "O registro de 'Contato' não foi encontrado.",
+      );
+    }
 
     return this.saoPedroContatoService.updateExternalContato(
       contatoId,

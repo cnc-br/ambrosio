@@ -1,4 +1,4 @@
-import { INestApplication, NotFoundException } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { setupTestModule } from '../test-setup.js';
 import { pessoaMock } from '../mocks/pessoa-mock.js';
@@ -63,6 +63,17 @@ describe('PessoaContatoController (e2e)', () => {
 
     // Limpa o histórico de chamadas acumuladas durante o setup
     vi.clearAllMocks();
+
+    // A pessoa tem um contato externo (9001) na São Pedro
+    vi.spyOn(mockSaoPedroContatoService, 'findExternalContatos').mockResolvedValue([
+      {
+        id: 9001,
+        pessoaId: 999,
+        tipoTelefone: 'CELULAR',
+        telefone: '11987654321',
+        contatoPrincipal: true,
+      },
+    ]);
   });
 
   afterAll(async () => {
@@ -412,11 +423,7 @@ describe('PessoaContatoController (e2e)', () => {
     ).toHaveBeenCalledWith('9001', payload);
   });
 
-  it(`/${principal}/:id/contato/:contatoId (PATCH) - 404 | propaga o 404 da Sao Pedro quando o contato externo nao existe`, async () => {
-    mockSaoPedroContatoService.updateExternalContato.mockRejectedValue(
-      new NotFoundException('Contato não encontrado.'),
-    );
-
+  it(`/${principal}/:id/contato/:contatoId (PATCH) - 404 | nao atualiza contato externo que nao pertence a pessoa`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaId}/contato/9999`)
       .set('Authorization', `Bearer ${token}`)
@@ -426,8 +433,6 @@ describe('PessoaContatoController (e2e)', () => {
     expect(response.body.statusCode).toBe(404);
     expect(
       mockSaoPedroContatoService.updateExternalContato,
-    ).toHaveBeenCalledWith('9999', {
-      telefone: '11999999999',
-    });
+    ).not.toHaveBeenCalled();
   });
 });

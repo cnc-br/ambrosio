@@ -282,7 +282,31 @@ describe('PessoaUpdateScope (e2e)', () => {
     vi.spyOn(
       mockSaoPedroContatoService,
       'findExternalContatos',
-    ).mockResolvedValue([]);
+    ).mockImplementation((pessoaUuid: string) => {
+      if (pessoaUuid === pessoaPropria.externalId) {
+        return Promise.resolve([
+          {
+            id: 9001,
+            pessoaId: 1,
+            tipoTelefone: 'CELULAR',
+            telefone: '11987654321',
+            contatoPrincipal: true,
+          },
+        ]);
+      }
+      if (pessoaUuid === pessoaOutra.externalId) {
+        return Promise.resolve([
+          {
+            id: 9002,
+            pessoaId: 2,
+            tipoTelefone: 'CELULAR',
+            telefone: '11987654321',
+            contatoPrincipal: true,
+          },
+        ]);
+      }
+      return Promise.resolve([]);
+    });
   });
 
   afterAll(async () => {
@@ -519,6 +543,19 @@ describe('PessoaUpdateScope (e2e)', () => {
 
     expect(response.status).toBe(403);
     expect(response.body.statusCode).toBe(403);
+    expect(
+      mockSaoPedroContatoService.updateExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_CNC não atualiza contato de outra pessoa`, async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/${principal}/${pessoaPropria.id}/contato/9002`)
+      .set('Authorization', `Bearer ${tokenSecretaria1}`)
+      .send({ telefone: '11987654321' });
+
+    expect(response.status).toBe(404);
+    expect(response.body.statusCode).toBe(404);
     expect(
       mockSaoPedroContatoService.updateExternalContato,
     ).not.toHaveBeenCalled();

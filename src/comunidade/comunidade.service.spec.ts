@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { UserRoleEnum } from 'neocatecumenal';
 import { PrismaService } from 'src/prisma.service.js';
 import { ParoquiaService } from 'src/paroquia/paroquia.service.js';
@@ -100,6 +101,82 @@ describe('ComunidadeService', () => {
         },
       }),
     );
+  });
+
+  it('adiciona pessoa já dentro do escopo', async () => {
+    const comunidade = { id: 1 };
+    const pessoa = { id: 2 };
+    const findFirstComunidade = vi.fn().mockResolvedValue(comunidade);
+    const findFirstPessoa = vi.fn().mockResolvedValue(pessoa);
+    const create = vi.fn().mockResolvedValue({ comunidadeId: 1, pessoaId: 2 });
+    const prismaMock = {
+      comunidade: { findFirst: findFirstComunidade },
+      pessoa: { findFirst: findFirstPessoa },
+      comunidadePessoa: { create },
+    } as unknown as PrismaService;
+
+    const caslAbilityService = new CaslAbilityService();
+    caslAbilityService.createForUser({
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+
+    const scopedService = new ComunidadeService(
+      prismaMock,
+      {} as HistoricoService,
+      caslAbilityService,
+      { findExternalPessoaByUuid: vi.fn() } as unknown as SaoPedroPessoaService,
+    );
+
+    await scopedService.adicionarPessoa(1, 2);
+
+    expect(findFirstComunidade).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [{ id: 1 }, expect.anything()],
+        },
+      }),
+    );
+    expect(findFirstPessoa).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [{ id: 2 }, expect.anything()],
+        },
+      }),
+    );
+    expect(create).toHaveBeenCalledWith({
+      data: { comunidadeId: 1, pessoaId: 2, dataEntrada: expect.any(Date) },
+    });
+  });
+
+  it('rejeita adicionar pessoa fora do escopo', async () => {
+    const findFirstComunidade = vi.fn().mockResolvedValue({ id: 1 });
+    const findFirstPessoa = vi.fn().mockResolvedValue(null);
+    const findUniqueOrThrow = vi.fn().mockResolvedValue({ id: 2 });
+    const create = vi.fn();
+    const prismaMock = {
+      comunidade: { findFirst: findFirstComunidade },
+      pessoa: { findFirst: findFirstPessoa, findUniqueOrThrow },
+      comunidadePessoa: { create },
+    } as unknown as PrismaService;
+
+    const caslAbilityService = new CaslAbilityService();
+    caslAbilityService.createForUser({
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+
+    const scopedService = new ComunidadeService(
+      prismaMock,
+      {} as HistoricoService,
+      caslAbilityService,
+      { findExternalPessoaByUuid: vi.fn() } as unknown as SaoPedroPessoaService,
+    );
+
+    await expect(scopedService.adicionarPessoa(1, 2)).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('resolve nomes externos e serializa carismas no findOne', async () => {

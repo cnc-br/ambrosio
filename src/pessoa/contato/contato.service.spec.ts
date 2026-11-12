@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ContatoService } from './contato.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
@@ -15,6 +15,7 @@ describe('ContatoService', () => {
   const saoPedroContatoServiceMock = {
     createExternalContato: vi.fn(),
     updateExternalContato: vi.fn(),
+    findExternalContatos: vi.fn(),
   };
   const abilityMock = {
     ability: { can: vi.fn() },
@@ -42,6 +43,9 @@ describe('ContatoService', () => {
     saoPedroContatoServiceMock.updateExternalContato.mockResolvedValue(
       contatoCriado,
     );
+    saoPedroContatoServiceMock.findExternalContatos.mockResolvedValue([
+      contatoCriado,
+    ]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -119,7 +123,7 @@ describe('ContatoService', () => {
     );
 
     await expect(
-      service.update(1, 'contato-externo', { telefone: '11999999999' }),
+      service.update(1, '1', { telefone: '11999999999' }),
     ).rejects.toThrow(ForbiddenException);
 
     expect(
@@ -136,14 +140,14 @@ describe('ContatoService', () => {
       email: 'contato@exemplo.com',
     };
 
-    const result = await service.update(1, 'contato-externo', dto);
+    const result = await service.update(1, '1', dto);
 
     expect(
       pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
     ).toHaveBeenCalledWith(1);
     expect(
       saoPedroContatoServiceMock.updateExternalContato,
-    ).toHaveBeenCalledWith('contato-externo', dto);
+    ).toHaveBeenCalledWith('1', dto);
     expect(
       saoPedroContatoServiceMock.createExternalContato,
     ).not.toHaveBeenCalled();
@@ -160,7 +164,7 @@ describe('ContatoService', () => {
     );
 
     await expect(
-      service.update(999, 'contato-externo', { telefone: '11999999999' }),
+      service.update(999, '1', { telefone: '11999999999' }),
     ).rejects.toBe(notFoundError);
 
     expect(
@@ -206,7 +210,7 @@ describe('ContatoService', () => {
     );
 
     await expect(
-      service.update(1, 'contato-externo', { telefone: '11999999999' }),
+      service.update(1, '1', { telefone: '11999999999' }),
     ).rejects.toThrow(ForbiddenException);
 
     expect(
@@ -215,7 +219,7 @@ describe('ContatoService', () => {
   });
 
   it('SECRETARIA_CNC atualiza contato em pessoa sem vínculo ativo', async () => {
-    const result = await service.update(1, 'contato-externo', {
+    const result = await service.update(1, '1', {
       telefone: '11999999999',
     });
 
@@ -226,7 +230,7 @@ describe('ContatoService', () => {
   });
 
   it('ADMIN atualiza contato sem restrição de escopo', async () => {
-    const result = await service.update(1, 'contato-externo', {
+    const result = await service.update(1, '1', {
       telefone: '11999999999',
     });
 
@@ -234,5 +238,19 @@ describe('ContatoService', () => {
     expect(
       saoPedroContatoServiceMock.updateExternalContato,
     ).toHaveBeenCalled();
+  });
+
+  it('não atualiza contato de outra pessoa', async () => {
+    saoPedroContatoServiceMock.findExternalContatos.mockResolvedValue([
+      { ...contatoCriado, id: 2 },
+    ]);
+
+    await expect(
+      service.update(1, '1', { telefone: '11999999999' }),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).not.toHaveBeenCalled();
   });
 });
