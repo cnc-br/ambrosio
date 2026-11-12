@@ -239,6 +239,11 @@ describe('CasalService', () => {
 
     it('SECRETARIA_CNC filtra cônjuges pelas paróquias do usuário', async () => {
       setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+      const pessoaElegivel = {
+        id: 1,
+        externalId: 'uuid-pessoa',
+      };
+      prismaMock.pessoa.findMany.mockResolvedValue([pessoaElegivel]);
 
       const result = await service.findAllBySexoEstadoCivilCasado('M');
 
@@ -268,7 +273,12 @@ describe('CasalService', () => {
           }),
         }),
       );
-      expect(result).toEqual([]);
+      expect(result).toContainEqual(
+        expect.objectContaining({
+          id: 1,
+          externalId: 'uuid-pessoa',
+        }),
+      );
     });
 
     it('SECRETARIA_CNC sem paróquias retorna lista vazia', async () => {
