@@ -3,11 +3,13 @@ import { EstadoCivilEnum, Pessoa } from 'neocatecumenal';
 import { BaseService } from 'src/commons/base.service.js';
 import { SEXO_ENUM } from 'src/commons/enums/enums.js';
 import { PrismaService } from 'src/prisma.service.js';
+import { Prisma } from 'src/prisma/generated-client.js';
 import { CreateCasalDto } from '../dto/create-casal.dto.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { serializePessoasListResponse } from '../pessoa.serializer.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
+import { PessoaService } from '../pessoa.service.js';
 
 @Injectable()
 export class CasalService extends BaseService {
@@ -15,6 +17,7 @@ export class CasalService extends BaseService {
     private prisma: PrismaService,
     private readonly saoPedroPessoaService: SaoPedroPessoaService,
     private readonly comunidadeService: ComunidadeService,
+    private readonly pessoaService: PessoaService,
     abilityService: CaslAbilityService,
   ) {
     super(abilityService);
@@ -24,6 +27,11 @@ export class CasalService extends BaseService {
     this.validateCreateAbility('pessoa');
     const pessoaId = createCasalDto.pessoaId;
     const conjugueId = createCasalDto.conjugueId;
+
+    await Promise.all([
+      this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(pessoaId),
+      this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(conjugueId),
+    ]);
 
     const [pessoa, conjugue] = await Promise.all([
       this.prisma.pessoa.findUniqueOrThrow({
@@ -74,6 +82,8 @@ export class CasalService extends BaseService {
   }
 
   async findAllBySexoEstadoCivilCasado(sexo: string) {
+    this.validateReadAbility('pessoa');
+
     // Função para buscar todas as pessoas com estado civil casado que não estão vinculadas como marido e mulher
     const param = sexo === 'M' ? SEXO_ENUM.MASCULINO : SEXO_ENUM.FEMININO;
     const externalPessoas =
@@ -86,6 +96,29 @@ export class CasalService extends BaseService {
     }
 
     const externalIds = externalPessoas.map((pessoa) => pessoa.externalId);
+
+    const { ability, userId } = this.abilityService;
+    const escopoParoquia: Prisma.pessoaWhereInput = ability.can(
+      'manage',
+      'all',
+    )
+      ? {}
+      : {
+          comunidadePessoas: {
+            some: {
+              dataSaida: null,
+              comunidade: {
+                is: {
+                  paroquia: {
+                    is: {
+                      usuarioParoquias: { some: { userId } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        };
 
     const pessoas = await this.prisma.pessoa.findMany({
       select: {
@@ -107,6 +140,7 @@ export class CasalService extends BaseService {
               none: {},
             },
           },
+          escopoParoquia,
         ],
       },
     });

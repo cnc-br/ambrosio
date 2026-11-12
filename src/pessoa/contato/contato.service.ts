@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { CreatePessoaContatoDto } from '../dto/create-pessoa-contato.dto.js';
 import { UpdatePessoaContatoDto } from '../dto/update-pessoa-contato.dto.js';
 import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
+import { PessoaService } from '../pessoa.service.js';
 
 @Injectable()
 export class ContatoService extends BaseService {
   constructor(
-    private prisma: PrismaService,
+    private readonly pessoaService: PessoaService,
     private readonly saoPedroContatoService: SaoPedroContatoService,
     abilityService: CaslAbilityService,
   ) {
@@ -19,10 +19,10 @@ export class ContatoService extends BaseService {
   async create(pessoaId: number, createPessoaContatoDto: CreatePessoaContatoDto) {
     this.validateCreateAbility('pessoa');
 
-    const pessoa = await this.prisma.pessoa.findUniqueOrThrow({
-      where: { id: pessoaId },
-      select: { externalId: true },
-    });
+    const pessoa =
+      await this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(
+        pessoaId,
+      );
 
     return this.saoPedroContatoService.createExternalContato(
       pessoa.externalId,
@@ -37,10 +37,7 @@ export class ContatoService extends BaseService {
   ) {
     this.validateUpdateAbility('pessoa');
 
-    await this.prisma.pessoa.findUniqueOrThrow({
-      where: { id: pessoaId },
-      select: { id: true },
-    });
+    await this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(pessoaId);
 
     return this.saoPedroContatoService.updateExternalContato(
       contatoId,

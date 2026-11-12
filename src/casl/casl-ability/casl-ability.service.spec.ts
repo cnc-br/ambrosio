@@ -82,6 +82,58 @@ describe('CaslAbilityService', () => {
     expect(service.ability.can('read', 'pessoa')).toBe(true);
   });
 
+  it('restringe a atualização de pessoa do SECRETARIA_CNC às paróquias do usuário', () => {
+    const user = {
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+    service.createForUser(user);
+
+    expect(accessibleBy(service.ability, 'update').pessoa).toEqual({
+      OR: [
+        {
+          OR: [
+            {
+              comunidadePessoas: { none: { dataSaida: null } },
+            },
+            {
+              comunidadePessoas: {
+                some: {
+                  dataSaida: null,
+                  comunidade: {
+                    is: {
+                      paroquia: {
+                        is: {
+                          usuarioParoquias: {
+                            some: { userId: 'usuario-secretaria' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(accessibleBy(service.ability, 'read').pessoa).toEqual({});
+    expect(accessibleBy(service.ability, 'create').pessoa).toEqual({});
+  });
+
+  it('não restringe a atualização de pessoa do ADMIN', () => {
+    const user = {
+      id: 'usuario-admin',
+      role: UserRoleEnum.ADMIN,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+    service.createForUser(user);
+
+    expect(accessibleBy(service.ability, 'update').pessoa).toEqual({});
+  });
+
   it('não permite que o NAO_IDENTIFICADO crie ou atualize pessoa', () => {
     const user = {
       id: 'usuario-nao-identificado',

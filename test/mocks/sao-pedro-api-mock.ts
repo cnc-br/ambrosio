@@ -62,6 +62,7 @@ export const mockSaoPedroPessoaService = {
     dataNascimento: new Date('1932-02-23'),
   }),
   updateExternalPessoa: vi.fn().mockResolvedValue({}),
+  getExternalPessoasEstadoCivilCasado: vi.fn().mockResolvedValue([]),
 };
 
 export const mockSaoPedroContatoService = {

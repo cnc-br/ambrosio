@@ -73,7 +73,29 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
   SECRETARIA_CNC(user, { can }) {
     can('read', 'pessoa');
     can('create', 'pessoa');
-    can('update', 'pessoa');
+    can('update', 'pessoa', {
+      OR: [
+        {
+          comunidadePessoas: { none: { dataSaida: null } },
+        },
+        {
+          comunidadePessoas: {
+            some: {
+              dataSaida: null,
+              comunidade: {
+                is: {
+                  paroquia: {
+                    is: {
+                      usuarioParoquias: { some: { userId: user.id } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    });
     can('read', 'estadoCivil');
     can('read', 'carisma');
     can('read', 'diocese');
@@ -102,11 +124,13 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
 @Injectable({ scope: Scope.REQUEST })
 export class CaslAbilityService {
   ability: AppAbility;
+  userId: string;
 
   createForUser(user: user) {
     const builder = new AbilityBuilder<AppAbility>(createPrismaAbility);
     rolePermissionsMap[user.role](user, builder);
     this.ability = builder.build();
+    this.userId = user.id;
 
     return this.ability;
   }
