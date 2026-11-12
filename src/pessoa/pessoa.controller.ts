@@ -18,6 +18,7 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotAcceptableResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -104,6 +105,10 @@ export class PessoaController {
   @ApiBadRequestResponse({
     description: 'Não é possivel criar casais do mesmo sexo',
   })
+  @ApiForbiddenResponse({
+    description: 'Usuário sem permissão ou pessoa fora do escopo de paróquia.',
+  })
+  @ApiNotFoundResponse({ description: 'Pessoa não encontrada.' })
   @ApiBody({
     description: 'Adicionar os casais use os seguintes parametros',
     examples: {
@@ -123,6 +128,9 @@ export class PessoaController {
   @Post('/:id/contato')
   @ApiCreatedResponse({ description: 'Contato criado com sucesso.' })
   @ApiBadRequestResponse({ description: 'Payload inválido' })
+  @ApiForbiddenResponse({
+    description: 'Usuário sem permissão ou pessoa fora do escopo de paróquia.',
+  })
   @ApiNotFoundResponse({ description: 'Pessoa não encontrada' })
   @ApiBody({
     description: 'Dados para criação de um contato da pessoa',
@@ -149,6 +157,9 @@ export class PessoaController {
   @Patch(':id/contato/:contatoId')
   @ApiOkResponse({ description: 'Contato atualizado com sucesso.' })
   @ApiBadRequestResponse({ description: 'Payload inválido' })
+  @ApiForbiddenResponse({
+    description: 'Usuário sem permissão ou pessoa fora do escopo de paróquia.',
+  })
   @ApiNotFoundResponse({ description: 'Pessoa não encontrada' })
   @ApiBody({
     description: 'Dados para atualização parcial de um contato da pessoa',
@@ -198,6 +209,10 @@ export class PessoaController {
   @ApiBadRequestResponse({
     description: 'Parâmetros inválidos. Use `sexo` M ou F',
   })
+  @ApiForbiddenResponse({
+    description: 'Usuário sem permissão de leitura de pessoa.',
+  })
+  @ApiNotFoundResponse({ description: 'Pessoa não encontrada.' })
   findAllConjugue(@Query() query: SexoQueryParamDto) {
     return this.casalService.findAllBySexoEstadoCivilCasado(
       query.sexo.toUpperCase(),
@@ -212,6 +227,12 @@ export class PessoaController {
 
   @Patch(':id')
   @ApiOkResponse({ description: 'Atualiza uma pessoa' })
+  @ApiBadRequestResponse({ description: 'CPF inválido.' })
+  @ApiConflictResponse({ description: 'CPF já cadastrado.' })
+  @ApiForbiddenResponse({
+    description: 'Usuário sem permissão ou pessoa fora do escopo de paróquia.',
+  })
+  @ApiNotFoundResponse({ description: 'Pessoa não encontrada.' })
   update(
     @Param('id') id: string,
     @Body() updatePessoaDto: UpdatePessoaDto,

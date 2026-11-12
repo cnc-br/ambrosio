@@ -97,3 +97,19 @@ Um usuário com permissão de atualização de comunidade (perfil `SECRETARIA_CN
 #### Scenario: Vínculo de pessoa em comunidade fora do escopo
 - **WHEN** um usuário `SECRETARIA_CNC` adiciona ou remove uma pessoa em uma comunidade cuja paróquia não está vinculada a ele
 - **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem alterar os vínculos da comunidade
+
+### Requirement: Adição de pessoa em comunidade restrita ao escopo da pessoa
+
+Ao adicionar uma pessoa a uma comunidade, o sistema SHALL validar, **antes** de criar o vínculo, que a pessoa já está dentro do escopo de atualização do usuário (vínculo ativo em uma comunidade de uma paróquia vinculada a ele em `usuarioParoquia`, ou sem vínculo ativo). O vínculo criado por essa operação SHALL NOT conceder, por si só, autorização de edição sobre a pessoa. Pessoa fora do escopo SHALL ser rejeitada com 403, e pessoa inexistente SHALL responder 404.
+
+#### Scenario: Adicionar pessoa já no escopo
+- **WHEN** um usuário `SECRETARIA_CNC` adiciona uma pessoa sem vínculo ativo ou com vínculo ativo em uma comunidade da sua paróquia a uma comunidade da sua paróquia
+- **THEN** o vínculo é criado com sucesso
+
+#### Scenario: Adicionar pessoa de outra paróquia
+- **WHEN** um usuário `SECRETARIA_CNC` adiciona uma pessoa cujo vínculo ativo está em uma comunidade de outra paróquia a uma comunidade da sua paróquia
+- **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem criar o vínculo
+
+#### Scenario: Adicionar pessoa inexistente
+- **WHEN** um usuário com permissão de atualização de comunidade adiciona uma pessoa inexistente a uma comunidade
+- **THEN** o sistema responde 404 com `message` `O registro de 'Pessoa' não foi encontrado.` e `statusCode` 404

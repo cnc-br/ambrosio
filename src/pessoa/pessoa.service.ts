@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { CreatePessoaDto } from './dto/create-pessoa.dto.js';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto.js';
 import { PrismaService } from 'src/prisma.service.js';
@@ -247,6 +247,8 @@ export class PessoaService extends BaseService {
   ): Promise<Pessoa> {
     this.validateUpdateAbility('pessoa');
 
+    await this.validarPessoaDentroDoEscopoDeAtualizacao(id);
+
     const pessoa = await this.findOne(id);
     if (updatePessoaDto.cpf && updatePessoaDto.cpf !== pessoa.cpf) {
       await this.analisarCPF(updatePessoaDto.cpf);
@@ -282,6 +284,34 @@ export class PessoaService extends BaseService {
     });
 
     return pessoa;
+  }
+
+  /**
+   * Garante que a pessoa existe e está dentro do escopo de `update` do usuário
+   * (paróquias vinculadas em `usuarioParoquia`), distinguindo 404 (inexistente)
+   * de 403 (existente fora do escopo).
+   *
+   * É pública para permitir reuso nos fluxos de casal e contato, que validam
+   * o escopo antes de qualquer escrita.
+   */
+  async validarPessoaDentroDoEscopoDeAtualizacao(id: number) {
+    const updateScope = accessibleBy(
+      this.abilityService.ability,
+      'update',
+    ).pessoa;
+
+    const pessoaNoEscopo = await this.prisma.pessoa.findFirst({
+      where: { AND: [{ id }, updateScope] },
+    });
+
+    if (!pessoaNoEscopo) {
+      await this.prisma.pessoa.findUniqueOrThrow({ where: { id } });
+      throw new ForbiddenException(
+        'Você não tem permissão para atualizar pessoa fora das suas paróquias.',
+      );
+    }
+
+    return pessoaNoEscopo;
   }
 
   private async fetchExternalContatos(

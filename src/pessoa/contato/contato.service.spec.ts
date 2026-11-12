@@ -1,20 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ContatoService } from './contato.service.js';
-import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 import { CreatePessoaContatoDto } from '../dto/create-pessoa-contato.dto.js';
+import { PessoaService } from '../pessoa.service.js';
 
 describe('ContatoService', () => {
   let service: ContatoService;
 
-  const prismaMock = {
-    pessoa: { findUniqueOrThrow: vi.fn() },
+  const pessoaServiceMock = {
+    validarPessoaDentroDoEscopoDeAtualizacao: vi.fn(),
   };
   const saoPedroContatoServiceMock = {
     createExternalContato: vi.fn(),
     updateExternalContato: vi.fn(),
+    findExternalContatos: vi.fn(),
   };
   const abilityMock = {
     ability: { can: vi.fn() },
@@ -33,7 +34,7 @@ describe('ContatoService', () => {
     vi.clearAllMocks();
 
     abilityMock.ability.can.mockReturnValue(true);
-    prismaMock.pessoa.findUniqueOrThrow.mockResolvedValue({
+    pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockResolvedValue({
       externalId: 'uuid-pessoa',
     });
     saoPedroContatoServiceMock.createExternalContato.mockResolvedValue(
@@ -42,11 +43,14 @@ describe('ContatoService', () => {
     saoPedroContatoServiceMock.updateExternalContato.mockResolvedValue(
       contatoCriado,
     );
+    saoPedroContatoServiceMock.findExternalContatos.mockResolvedValue([
+      contatoCriado,
+    ]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContatoService,
-        { provide: PrismaService, useValue: prismaMock },
+        { provide: PessoaService, useValue: pessoaServiceMock },
         {
           provide: SaoPedroContatoService,
           useValue: saoPedroContatoServiceMock,
@@ -69,7 +73,9 @@ describe('ContatoService', () => {
       service.create(1, { telefone: '11999999999' }),
     ).rejects.toThrow(ForbiddenException);
 
-    expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(
+      pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
+    ).not.toHaveBeenCalled();
     expect(
       saoPedroContatoServiceMock.createExternalContato,
     ).not.toHaveBeenCalled();
@@ -84,10 +90,9 @@ describe('ContatoService', () => {
 
     const result = await service.create(1, dto);
 
-    expect(prismaMock.pessoa.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { id: 1 },
-      select: { externalId: true },
-    });
+    expect(
+      pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
+    ).toHaveBeenCalledWith(1);
     expect(
       saoPedroContatoServiceMock.createExternalContato,
     ).toHaveBeenCalledWith('uuid-pessoa', dto);
@@ -99,7 +104,9 @@ describe('ContatoService', () => {
       new Error('O registro de Pessoa não foi encontrado.'),
       { code: 'P2025' },
     );
-    prismaMock.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
+    pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
+      notFoundError,
+    );
 
     await expect(
       service.create(999, { telefone: '11999999999' }),
@@ -116,10 +123,12 @@ describe('ContatoService', () => {
     );
 
     await expect(
-      service.update(1, 'contato-externo', { telefone: '11999999999' }),
+      service.update(1, '1', { telefone: '11999999999' }),
     ).rejects.toThrow(ForbiddenException);
 
-    expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(
+      pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
+    ).not.toHaveBeenCalled();
     expect(
       saoPedroContatoServiceMock.updateExternalContato,
     ).not.toHaveBeenCalled();
@@ -131,15 +140,14 @@ describe('ContatoService', () => {
       email: 'contato@exemplo.com',
     };
 
-    const result = await service.update(1, 'contato-externo', dto);
+    const result = await service.update(1, '1', dto);
 
-    expect(prismaMock.pessoa.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { id: 1 },
-      select: { id: true },
-    });
+    expect(
+      pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
+    ).toHaveBeenCalledWith(1);
     expect(
       saoPedroContatoServiceMock.updateExternalContato,
-    ).toHaveBeenCalledWith('contato-externo', dto);
+    ).toHaveBeenCalledWith('1', dto);
     expect(
       saoPedroContatoServiceMock.createExternalContato,
     ).not.toHaveBeenCalled();
@@ -151,11 +159,95 @@ describe('ContatoService', () => {
       new Error('O registro de Pessoa não foi encontrado.'),
       { code: 'P2025' },
     );
-    prismaMock.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
+    pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
+      notFoundError,
+    );
 
     await expect(
-      service.update(999, 'contato-externo', { telefone: '11999999999' }),
+      service.update(999, '1', { telefone: '11999999999' }),
     ).rejects.toBe(notFoundError);
+
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC cria contato em pessoa fora do escopo', async () => {
+    pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
+      new ForbiddenException('Fora do escopo'),
+    );
+
+    await expect(
+      service.create(1, { telefone: '11999999999' }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC cria contato em pessoa sem vínculo ativo', async () => {
+    const result = await service.create(1, { telefone: '11999999999' });
+
+    expect(result).toEqual(contatoCriado);
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).toHaveBeenCalled();
+  });
+
+  it('ADMIN cria contato sem restrição de escopo', async () => {
+    const result = await service.create(1, { telefone: '11999999999' });
+
+    expect(result).toEqual(contatoCriado);
+    expect(
+      saoPedroContatoServiceMock.createExternalContato,
+    ).toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC atualiza contato em pessoa fora do escopo', async () => {
+    pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
+      new ForbiddenException('Fora do escopo'),
+    );
+
+    await expect(
+      service.update(1, '1', { telefone: '11999999999' }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC atualiza contato em pessoa sem vínculo ativo', async () => {
+    const result = await service.update(1, '1', {
+      telefone: '11999999999',
+    });
+
+    expect(result).toEqual(contatoCriado);
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).toHaveBeenCalled();
+  });
+
+  it('ADMIN atualiza contato sem restrição de escopo', async () => {
+    const result = await service.update(1, '1', {
+      telefone: '11999999999',
+    });
+
+    expect(result).toEqual(contatoCriado);
+    expect(
+      saoPedroContatoServiceMock.updateExternalContato,
+    ).toHaveBeenCalled();
+  });
+
+  it('não atualiza contato de outra pessoa', async () => {
+    saoPedroContatoServiceMock.findExternalContatos.mockResolvedValue([
+      { ...contatoCriado, id: 2 },
+    ]);
+
+    await expect(
+      service.update(1, '1', { telefone: '11999999999' }),
+    ).rejects.toThrow(NotFoundException);
 
     expect(
       saoPedroContatoServiceMock.updateExternalContato,

@@ -377,6 +377,43 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
+  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 403 | SECRETARIA_CNC nao adiciona pessoa de outra paroquia a comunidade da propria paroquia`, async () => {
+    const comunidade = await prisma.comunidade.findFirstOrThrow({
+      where: { paroquiaId: paroquiaDoUsuario },
+    });
+    const comunidadeOutra = await prisma.comunidade.findFirstOrThrow({
+      where: { paroquiaId: paroquiaForaDoEscopo },
+    });
+
+    const pessoaOutra = await prisma.pessoa.create({
+      data: {
+        externalId: `e2e-comunidade-bypass-${Date.now()}`,
+        situacaoReligiosaId: 1,
+      },
+      select: { id: true },
+    });
+    await prisma.comunidadePessoa.create({
+      data: {
+        pessoaId: pessoaOutra.id,
+        comunidadeId: comunidadeOutra.id,
+        dataEntrada: new Date(),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}/${comunidade.id}/pessoa/${pessoaOutra.id}`)
+      .set('Authorization', `Bearer ${tokenSecretariaCnc}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.statusCode).toBe(403);
+
+    // Cleanup: remove o vínculo e a pessoa criada pelo teste
+    await prisma.comunidadePessoa.deleteMany({
+      where: { pessoaId: pessoaOutra.id },
+    });
+    await prisma.pessoa.delete({ where: { id: pessoaOutra.id } });
+  });
+
   it(`/${principal}/:id/pessoa/:pessoaId (DELETE) - 403 | SECRETARIA_CNC nao remove pessoa em comunidade fora das suas paroquias`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: paroquiaForaDoEscopo },

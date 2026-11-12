@@ -43,6 +43,7 @@ describe('PessoaService', () => {
     pessoa: {
       create: vi.fn(),
       delete: vi.fn(),
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       findMany: vi.fn(),
@@ -232,6 +233,16 @@ describe('PessoaService', () => {
       id: 1,
       role: UserRoleEnum.ADMIN,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+    prismaMock.pessoa.findFirst.mockResolvedValue(pessoaLocal);
+  };
+
+  const setSecretariaAbility = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).abilityService.createForUser({
+      id: 'usuario-secretaria',
+      role: UserRoleEnum.SECRETARIA_CNC,
+    } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+    prismaMock.pessoa.findFirst.mockResolvedValue(pessoaLocal);
   };
 
   it('update não valida CPF quando o CPF não é informado', async () => {
@@ -359,6 +370,131 @@ describe('PessoaService', () => {
     ).rejects.toThrow('falha externa');
 
     expect(prismaMock.pessoa.update).not.toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC atualiza pessoa com vínculo ativo na paróquia do usuário', async () => {
+    setSecretariaAbility();
+    const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockResolvedValue({});
+
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
+
+    expect(findOne).toHaveBeenCalledWith(1);
+    expect(prismaMock.pessoa.findFirst).toHaveBeenCalledWith({
+      where: { AND: [{ id: 1 }, expect.any(Object)] },
+    });
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC atualiza pessoa sem vínculo ativo com comunidade', async () => {
+    setSecretariaAbility();
+    const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockResolvedValue({});
+
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
+
+    expect(findOne).toHaveBeenCalledWith(1);
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC atualiza pessoa com vínculo apenas encerrado', async () => {
+    setSecretariaAbility();
+    const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockResolvedValue({});
+
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
+
+    expect(findOne).toHaveBeenCalledWith(1);
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC atualiza pessoa com vínculos ativos em paróquias próprias e de terceiros', async () => {
+    setSecretariaAbility();
+    const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockResolvedValue({});
+
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
+
+    expect(findOne).toHaveBeenCalledWith(1);
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
+  });
+
+  it('SECRETARIA_CNC não atualiza pessoa com vínculo ativo em outra paróquia', async () => {
+    setSecretariaAbility();
+    prismaMock.pessoa.findFirst.mockResolvedValue(null);
+    prismaMock.pessoa.findUniqueOrThrow.mockResolvedValue(pessoaLocal);
+    const findOne = vi.spyOn(service, 'findOne');
+
+    await expect(
+      service.update(1, { nome: 'Novo Nome' }, autorId),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(findOne).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).not.toHaveBeenCalled();
+    expect(prismaMock.pessoa.update).not.toHaveBeenCalled();
+  });
+
+  it('update de pessoa inexistente propaga 404', async () => {
+    setSecretariaAbility();
+    prismaMock.pessoa.findFirst.mockResolvedValue(null);
+    const notFoundError = Object.assign(
+      new Error('O registro de Pessoa não foi encontrado.'),
+      { code: 'P2025' },
+    );
+    prismaMock.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
+    const findOne = vi.spyOn(service, 'findOne');
+
+    await expect(
+      service.update(1, { nome: 'Novo Nome' }, autorId),
+    ).rejects.toBe(notFoundError);
+
+    expect(findOne).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('ADMIN atualiza pessoa sem restrição de escopo', async () => {
+    setAdminAbility();
+    const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
+      id: 1,
+      externalId: 'uuid-externo',
+      cpf: '12345678901',
+    } as unknown as Awaited<ReturnType<PessoaService['findOne']>>);
+    saoPedroPessoaServiceMock.updateExternalPessoa.mockResolvedValue({});
+
+    await service.update(1, { nome: 'Novo Nome' }, autorId);
+
+    expect(findOne).toHaveBeenCalledWith(1);
+    expect(
+      saoPedroPessoaServiceMock.updateExternalPessoa,
+    ).toHaveBeenCalled();
   });
 
   it('create ignora autoria enviada no payload', async () => {

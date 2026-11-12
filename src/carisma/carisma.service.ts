@@ -44,13 +44,14 @@ export class CarismaService extends BaseService {
       throw new BadRequestException('Nenhum carisma fornecido');
     }
 
+    // Valida permissão e escopo de paróquia antes de qualquer escrita
+    this.validateUpdateAbility('pessoa');
+    await this.pessoaService.validarPessoaDentroDoEscopoDeAtualizacao(pessoaId);
+
     // Remove IDs duplicados
     const uniqueCarismaIds = [...new Set(carismaDto.carismaIds)];
 
     try {
-      // Verifica se a pessoa existe
-      await this.pessoaService.findOne(pessoaId);
-
       // Verifica se todos os carismas fornecidos existem
       const carismas = await this.prisma.carisma.findMany({
         where: { id: { in: uniqueCarismaIds } },
