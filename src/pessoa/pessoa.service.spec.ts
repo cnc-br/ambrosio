@@ -637,4 +637,53 @@ describe('PessoaService', () => {
     ).toHaveBeenCalled();
     expect(result.id).toBe(1);
   });
+
+  it('create propaga a falha quando a escrita local falha após criar a pessoa externa', async () => {
+    prepararCriacao();
+    const erroLocal = new Error('Falha ao perseguir pessoa localmente');
+    pessoaRepositoryMock.create.mockRejectedValue(erroLocal);
+
+    await expect(service.create(createPessoaDto, autorId)).rejects.toThrow(
+      'Falha ao perseguir pessoa localmente',
+    );
+
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).toHaveBeenCalledWith(createPessoaDto);
+  });
+
+  it('create reutiliza pessoa externa já existente pelo CPF em vez de criar duplicata', async () => {
+    setAdminAbility();
+    vi.mocked(situacaoReligiosaService.findOne).mockResolvedValue({
+      id: 1,
+      descricao: 'LEIGO',
+    } as never);
+    // Falha de escrita local anterior deixou a pessoa apenas na API externa.
+    saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
+      externalPessoa,
+    );
+    pessoaRepositoryMock.findUniquePorExternalId.mockResolvedValue(null);
+    pessoaRepositoryMock.create.mockResolvedValue(pessoaLocal);
+
+    const dtoComCpf = {
+      ...createPessoaDto,
+      cpf: '52998224725',
+    } as unknown as Parameters<PessoaService['create']>[0];
+
+    const result = await service.create(dtoComCpf, autorId);
+
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).toHaveBeenCalledWith('52998224725');
+    expect(pessoaRepositoryMock.create).toHaveBeenCalledWith({
+      externalId: externalPessoa.externalId,
+      situacaoReligiosaId: 1,
+      cadastradoPorId: autorId,
+      atualizadoPorId: autorId,
+    });
+    expect(result.id).toBe(1);
+  });
 });

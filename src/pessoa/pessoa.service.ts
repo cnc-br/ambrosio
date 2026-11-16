@@ -73,16 +73,20 @@ export class PessoaService extends BaseService {
   /**
    * Cria a pessoa na API externa (São Pedro) e na tabela local e serializa a
    * resposta. Responsabilidade isolada do fluxo de criação.
+   *
+   * A criação externa é idempotente por CPF: se um registro externo já existe
+   * (caso de retry após uma escrita local ter falhado em tentativa anterior), ele
+   * é reutilizado em vez de duplicado. A falha na escrita local é repropagada para
+   * quem chamou, evitando que um registro externo órfão fique sem contraparte local.
    */
   private async criarPessoaCompleta(
     createPessoaDto: CreatePessoaDto,
     situacaoReligiosa: situacaoReligiosa,
     userId: string,
   ) {
-    try {
-      const external =
-        await this.saoPedroPessoaService.createExternalPessoa(createPessoaDto);
+    const external = await this.obterOuCriarPessoaExterna(createPessoaDto);
 
+    try {
       const pessoa = await this.pessoaRepository.create({
         externalId: external.externalId,
         situacaoReligiosaId: situacaoReligiosa.id,
@@ -94,8 +98,36 @@ export class PessoaService extends BaseService {
       );
       return serializePessoaResponse(pessoa, external);
     } catch (error) {
-      this.logger.error('Error posting external pessoa', error);
+      this.logger.error(
+        `Falha ao persistir pessoa localmente após criar/obter a pessoa externa ${external.externalId}`,
+        error,
+      );
+      throw error;
     }
+  }
+
+  /**
+   * Retorna a pessoa externa já cadastrada para o CPF informado quando ela existe,
+   * ou cria uma nova. Isso torna a criação externa idempotente: um retry após uma
+   * falha de escrita local reutiliza o registro externo anterior em vez de POSTar
+   * uma duplicata. Sem CPF informado, sempre cria um novo registro externo.
+   */
+  private async obterOuCriarPessoaExterna(
+    createPessoaDto: CreatePessoaDto,
+  ): Promise<Pessoa> {
+    if (createPessoaDto.cpf) {
+      const existente =
+        await this.saoPedroPessoaService.getExternalPessoaByCpf(
+          createPessoaDto.cpf,
+        );
+      if (existente) {
+        this.logger.warn(
+          `Pessoa externa já existente para CPF ${createPessoaDto.cpf}, reutilizando externalId ${existente.externalId}`,
+        );
+        return existente;
+      }
+    }
+    return this.saoPedroPessoaService.createExternalPessoa(createPessoaDto);
   }
 
   /**
