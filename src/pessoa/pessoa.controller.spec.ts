@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PessoaController } from './pessoa.controller.js';
 import { PessoaService } from './pessoa.service.js';
+import { PessoaRepository } from './repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from './repositories/pessoa-casal.repository.js';
 import { PrismaService } from 'src/prisma.service.js';
 import { EstadoCivilService } from 'src/configuracoes/estado-civil/estado-civil.service.js';
 import { EscolaridadeService } from 'src/configuracoes/escolaridade/escolaridade.service.js';
@@ -42,6 +44,8 @@ describe('PessoaController', () => {
       providers: [
         PessoaService,
         CasalService,
+        { provide: PessoaRepository, useValue: {} },
+        { provide: PessoaCasalRepository, useValue: {} },
         JwtService,
         ComunidadeService,
         ParoquiaService,

@@ -5,6 +5,8 @@ import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { TipoEquipeService } from 'src/configuracoes/tipo-equipe/tipo-equipe.service.js';
 import { PessoaService } from 'src/pessoa/pessoa.service.js';
+import { PessoaRepository } from 'src/pessoa/repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from 'src/pessoa/repositories/pessoa-casal.repository.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { SaoPedroAuthService } from 'src/external/sao-pedro/sao-pedro-auth.service.js';
@@ -25,6 +27,8 @@ describe('EquipeController', () => {
         CaslAbilityService,
         TipoEquipeService,
         PessoaService,
+        { provide: PessoaRepository, useValue: {} },
+        { provide: PessoaCasalRepository, useValue: {} },
         { provide: ComunidadeService, useValue: {} },
         SaoPedroPessoaService,
         SaoPedroAuthService,

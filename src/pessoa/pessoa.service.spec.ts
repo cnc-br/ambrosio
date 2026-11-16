@@ -6,7 +6,8 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRoleEnum } from 'neocatecumenal';
 import { PessoaService } from './pessoa.service.js';
-import { PrismaService } from 'src/prisma.service.js';
+import { PessoaRepository } from './repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from './repositories/pessoa-casal.repository.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
@@ -15,7 +16,8 @@ import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato
 
 describe('PessoaService', () => {
   let service: PessoaService;
-  let prismaService: PrismaService;
+  let pessoaRepository: PessoaRepository;
+  let pessoaCasalRepository: PessoaCasalRepository;
   let situacaoReligiosaService: SituacaoReligiosaService;
   let saoPedroPessoaService: SaoPedroPessoaService;
   let saoPedroContatoService: SaoPedroContatoService;
@@ -37,21 +39,20 @@ describe('PessoaService', () => {
     validarComunidadeDentroDoEscopoDeAtualizacao: vi.fn(),
     adicionarPessoa: vi.fn(),
   };
-  const prismaMock = {
+  const pessoaRepositoryMock = {
     create: vi.fn(),
-    findFirstOrThrow: vi.fn(),
-    pessoa: {
-      create: vi.fn(),
-      delete: vi.fn(),
-      findFirst: vi.fn(),
-      findUnique: vi.fn(),
-      findUniqueOrThrow: vi.fn(),
-      findMany: vi.fn(),
-      update: vi.fn(),
-    },
-    pessoaCasal: {
-      findFirst: vi.fn(),
-    },
+    deletePorId: vi.fn(),
+    findManyParaListagem: vi.fn(),
+    findDetalhadoOrThrow: vi.fn(),
+    findUniquePorExternalId: vi.fn(),
+    findBasicoPorIdOrThrow: vi.fn(),
+    findNoEscopo: vi.fn(),
+    findUniqueOrThrowPorId: vi.fn(),
+    updatePorId: vi.fn(),
+  };
+  const pessoaCasalRepositoryMock = {
+    create: vi.fn(),
+    findFirst: vi.fn(),
   };
 
   const externalPessoa = {
@@ -87,7 +88,11 @@ describe('PessoaService', () => {
       providers: [
         PessoaService,
         CaslAbilityService,
-        { provide: PrismaService, useValue: prismaMock },
+        { provide: PessoaRepository, useValue: pessoaRepositoryMock },
+        {
+          provide: PessoaCasalRepository,
+          useValue: pessoaCasalRepositoryMock,
+        },
         {
           provide: SituacaoReligiosaService,
           useValue: {
@@ -114,7 +119,10 @@ describe('PessoaService', () => {
     }).compile();
 
     service = await module.resolve<PessoaService>(PessoaService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    pessoaRepository = module.get<PessoaRepository>(PessoaRepository);
+    pessoaCasalRepository = module.get<PessoaCasalRepository>(
+      PessoaCasalRepository,
+    );
     saoPedroPessoaService = module.get<SaoPedroPessoaService>(
       SaoPedroPessoaService,
     );
@@ -131,7 +139,8 @@ describe('PessoaService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-    expect(prismaService).toBeDefined();
+    expect(pessoaRepository).toBeDefined();
+    expect(pessoaCasalRepository).toBeDefined();
     expect(situacaoReligiosaService).toBeDefined();
     expect(comunidadeService).toBeDefined();
     expect(abilityService).toBeDefined();
@@ -189,7 +198,7 @@ describe('PessoaService', () => {
     saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
       externalPessoa,
     );
-    prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.findUniquePorExternalId.mockResolvedValue(pessoaLocal);
     saoPedroContatoServiceMock.findExternalContatos.mockResolvedValue(contatos);
 
     const result = await service.findOneByCpf('12345678901');
@@ -204,7 +213,7 @@ describe('PessoaService', () => {
     saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
       externalPessoa,
     );
-    prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.findUniquePorExternalId.mockResolvedValue(pessoaLocal);
     saoPedroContatoServiceMock.findExternalContatos.mockRejectedValue(
       new Error('falha externa'),
     );
@@ -224,7 +233,7 @@ describe('PessoaService', () => {
     await expect(service.update(1, {}, autorId)).rejects.toThrow(
       'Você não tem permissão para update pessoa',
     );
-    expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+    expect(pessoaRepositoryMock.findNoEscopo).not.toHaveBeenCalled();
   });
 
   const setAdminAbility = () => {
@@ -233,7 +242,7 @@ describe('PessoaService', () => {
       id: 1,
       role: UserRoleEnum.ADMIN,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
-    prismaMock.pessoa.findFirst.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.findNoEscopo.mockResolvedValue(pessoaLocal);
   };
 
   const setSecretariaAbility = () => {
@@ -242,7 +251,7 @@ describe('PessoaService', () => {
       id: 'usuario-secretaria',
       role: UserRoleEnum.SECRETARIA_CNC,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
-    prismaMock.pessoa.findFirst.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.findNoEscopo.mockResolvedValue(pessoaLocal);
   };
 
   it('update não valida CPF quando o CPF não é informado', async () => {
@@ -325,7 +334,7 @@ describe('PessoaService', () => {
     saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
       externalPessoa,
     );
-    prismaMock.pessoa.findUnique.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.findUniquePorExternalId.mockResolvedValue(pessoaLocal);
 
     await expect(
       service.update(1, { cpf: '52998224725' }, autorId),
@@ -348,9 +357,8 @@ describe('PessoaService', () => {
 
     await service.update(1, { nome: 'Novo Nome' }, autorId);
 
-    expect(prismaMock.pessoa.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { atualizadoPorId: autorId },
+    expect(pessoaRepositoryMock.updatePorId).toHaveBeenCalledWith(1, {
+      atualizadoPorId: autorId,
     });
   });
 
@@ -369,7 +377,7 @@ describe('PessoaService', () => {
       service.update(1, { nome: 'Novo Nome' }, autorId),
     ).rejects.toThrow('falha externa');
 
-    expect(prismaMock.pessoa.update).not.toHaveBeenCalled();
+    expect(pessoaRepositoryMock.updatePorId).not.toHaveBeenCalled();
   });
 
   it('SECRETARIA_CNC atualiza pessoa com vínculo ativo na paróquia do usuário', async () => {
@@ -384,9 +392,10 @@ describe('PessoaService', () => {
     await service.update(1, { nome: 'Novo Nome' }, autorId);
 
     expect(findOne).toHaveBeenCalledWith(1);
-    expect(prismaMock.pessoa.findFirst).toHaveBeenCalledWith({
-      where: { AND: [{ id: 1 }, expect.any(Object)] },
-    });
+    expect(pessoaRepositoryMock.findNoEscopo).toHaveBeenCalledWith(
+      1,
+      expect.any(Object),
+    );
     expect(
       saoPedroPessoaServiceMock.updateExternalPessoa,
     ).toHaveBeenCalled();
@@ -445,8 +454,8 @@ describe('PessoaService', () => {
 
   it('SECRETARIA_CNC não atualiza pessoa com vínculo ativo em outra paróquia', async () => {
     setSecretariaAbility();
-    prismaMock.pessoa.findFirst.mockResolvedValue(null);
-    prismaMock.pessoa.findUniqueOrThrow.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.findNoEscopo.mockResolvedValue(null);
+    pessoaRepositoryMock.findUniqueOrThrowPorId.mockResolvedValue(pessoaLocal);
     const findOne = vi.spyOn(service, 'findOne');
 
     await expect(
@@ -457,17 +466,17 @@ describe('PessoaService', () => {
     expect(
       saoPedroPessoaServiceMock.updateExternalPessoa,
     ).not.toHaveBeenCalled();
-    expect(prismaMock.pessoa.update).not.toHaveBeenCalled();
+    expect(pessoaRepositoryMock.updatePorId).not.toHaveBeenCalled();
   });
 
   it('update de pessoa inexistente propaga 404', async () => {
     setSecretariaAbility();
-    prismaMock.pessoa.findFirst.mockResolvedValue(null);
+    pessoaRepositoryMock.findNoEscopo.mockResolvedValue(null);
     const notFoundError = Object.assign(
       new Error('O registro de Pessoa não foi encontrado.'),
       { code: 'P2025' },
     );
-    prismaMock.pessoa.findUniqueOrThrow.mockRejectedValue(notFoundError);
+    pessoaRepositoryMock.findUniqueOrThrowPorId.mockRejectedValue(notFoundError);
     const findOne = vi.spyOn(service, 'findOne');
 
     await expect(
@@ -507,12 +516,10 @@ describe('PessoaService', () => {
 
     await service.create(dtoComAutoria, autorId);
 
-    expect(prismaMock.pessoa.create).toHaveBeenCalledWith(
+    expect(pessoaRepositoryMock.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          cadastradoPorId: autorId,
-          atualizadoPorId: autorId,
-        }),
+        cadastradoPorId: autorId,
+        atualizadoPorId: autorId,
       }),
     );
   });
@@ -525,7 +532,7 @@ describe('PessoaService', () => {
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
 
     saoPedroPessoaServiceMock.findAllPessoas.mockResolvedValue([externalPessoa]);
-    prismaMock.pessoa.findMany.mockResolvedValue([pessoaLocal]);
+    pessoaRepositoryMock.findManyParaListagem.mockResolvedValue([pessoaLocal]);
 
     const result = await service.findAll(1, 1);
 
@@ -554,7 +561,7 @@ describe('PessoaService', () => {
     saoPedroPessoaServiceMock.createExternalPessoa.mockResolvedValue(
       externalPessoa,
     );
-    prismaMock.pessoa.create.mockResolvedValue(pessoaLocal);
+    pessoaRepositoryMock.create.mockResolvedValue(pessoaLocal);
   };
 
   it('create com comunidadeId valida o escopo ANTES de criar a pessoa em 403/404', async () => {
@@ -573,7 +580,7 @@ describe('PessoaService', () => {
     expect(
       saoPedroPessoaServiceMock.createExternalPessoa,
     ).not.toHaveBeenCalled();
-    expect(prismaMock.pessoa.create).not.toHaveBeenCalled();
+    expect(pessoaRepositoryMock.create).not.toHaveBeenCalled();
   });
 
   it('create cria a pessoa e depois vincula à comunidade', async () => {
@@ -591,13 +598,11 @@ describe('PessoaService', () => {
     expect(
       saoPedroPessoaServiceMock.createExternalPessoa,
     ).toHaveBeenCalledWith(createPessoaDto);
-    expect(prismaMock.pessoa.create).toHaveBeenCalledWith({
-      data: {
-        externalId: externalPessoa.externalId,
-        situacaoReligiosaId: 1,
-        cadastradoPorId: autorId,
-        atualizadoPorId: autorId,
-      },
+    expect(pessoaRepositoryMock.create).toHaveBeenCalledWith({
+      externalId: externalPessoa.externalId,
+      situacaoReligiosaId: 1,
+      cadastradoPorId: autorId,
+      atualizadoPorId: autorId,
     });
     expect(comunidadeServiceMock.adicionarPessoa).toHaveBeenCalledWith(10, 1);
     expect(result.id).toBe(1);
@@ -615,9 +620,7 @@ describe('PessoaService', () => {
       'Falha ao vincular',
     );
 
-    expect(prismaMock.pessoa.delete).toHaveBeenCalledWith({
-      where: { id: 1 },
-    });
+    expect(pessoaRepositoryMock.deletePorId).toHaveBeenCalledWith(1);
   });
 
   it('create sem comunidadeId não valida vínculo nem adiciona à comunidade', async () => {
@@ -632,6 +635,55 @@ describe('PessoaService', () => {
     expect(
       saoPedroPessoaServiceMock.createExternalPessoa,
     ).toHaveBeenCalled();
+    expect(result.id).toBe(1);
+  });
+
+  it('create propaga a falha quando a escrita local falha após criar a pessoa externa', async () => {
+    prepararCriacao();
+    const erroLocal = new Error('Falha ao perseguir pessoa localmente');
+    pessoaRepositoryMock.create.mockRejectedValue(erroLocal);
+
+    await expect(service.create(createPessoaDto, autorId)).rejects.toThrow(
+      'Falha ao perseguir pessoa localmente',
+    );
+
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).toHaveBeenCalledWith(createPessoaDto);
+  });
+
+  it('create reutiliza pessoa externa já existente pelo CPF em vez de criar duplicata', async () => {
+    setAdminAbility();
+    vi.mocked(situacaoReligiosaService.findOne).mockResolvedValue({
+      id: 1,
+      descricao: 'LEIGO',
+    } as never);
+    // Falha de escrita local anterior deixou a pessoa apenas na API externa.
+    saoPedroPessoaServiceMock.getExternalPessoaByCpf.mockResolvedValue(
+      externalPessoa,
+    );
+    pessoaRepositoryMock.findUniquePorExternalId.mockResolvedValue(null);
+    pessoaRepositoryMock.create.mockResolvedValue(pessoaLocal);
+
+    const dtoComCpf = {
+      ...createPessoaDto,
+      cpf: '52998224725',
+    } as unknown as Parameters<PessoaService['create']>[0];
+
+    const result = await service.create(dtoComCpf, autorId);
+
+    expect(
+      saoPedroPessoaServiceMock.createExternalPessoa,
+    ).not.toHaveBeenCalled();
+    expect(
+      saoPedroPessoaServiceMock.getExternalPessoaByCpf,
+    ).toHaveBeenCalledWith('52998224725');
+    expect(pessoaRepositoryMock.create).toHaveBeenCalledWith({
+      externalId: externalPessoa.externalId,
+      situacaoReligiosaId: 1,
+      cadastradoPorId: autorId,
+      atualizadoPorId: autorId,
+    });
     expect(result.id).toBe(1);
   });
 });

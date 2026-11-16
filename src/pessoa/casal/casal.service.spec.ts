@@ -3,27 +3,27 @@ import { ForbiddenException } from '@nestjs/common';
 import { UserRoleEnum } from 'neocatecumenal';
 import { CasalService } from './casal.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
-import { PrismaService } from 'src/prisma.service.js';
+import { PessoaRepository } from '../repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from '../repositories/pessoa-casal.repository.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { PessoaService } from '../pessoa.service.js';
 
 describe('CasalService', () => {
   let service: CasalService;
-  let prismaService: PrismaService;
+  let pessoaRepository: PessoaRepository;
+  let pessoaCasalRepository: PessoaCasalRepository;
   let saoPedroPessoaService: SaoPedroPessoaService;
   let comunidadeService: ComunidadeService;
   let abilityService: CaslAbilityService;
 
-  const prismaMock = {
-    pessoa: {
-      findUniqueOrThrow: vi.fn(),
-      findMany: vi.fn(),
-    },
-    pessoaCasal: {
-      findFirst: vi.fn(),
-      create: vi.fn(),
-    },
+  const pessoaRepositoryMock = {
+    findUniqueOrThrowPorId: vi.fn(),
+    findManyElegiveisCasal: vi.fn(),
+  };
+  const pessoaCasalRepositoryMock = {
+    findFirst: vi.fn(),
+    create: vi.fn(),
   };
   const pessoaServiceMock = {
     validarPessoaDentroDoEscopoDeAtualizacao: vi.fn(),
@@ -62,14 +62,14 @@ describe('CasalService', () => {
   };
 
   const prepararCasal = () => {
-    prismaMock.pessoa.findUniqueOrThrow
+    pessoaRepositoryMock.findUniqueOrThrowPorId
       .mockResolvedValueOnce(pessoa)
       .mockResolvedValueOnce(conjugue);
     saoPedroPessoaServiceMock.findExternalPessoaByUuid
       .mockResolvedValueOnce(externalPessoa)
       .mockResolvedValueOnce(externalConjugue);
-    prismaMock.pessoaCasal.findFirst.mockResolvedValue(null);
-    prismaMock.pessoaCasal.create.mockResolvedValue(casalCriado);
+    pessoaCasalRepositoryMock.findFirst.mockResolvedValue(null);
+    pessoaCasalRepositoryMock.create.mockResolvedValue(casalCriado);
     comunidadeServiceMock.findByPessoaId.mockResolvedValue(null);
     comunidadeServiceMock.adicionarPessoa.mockResolvedValue(undefined);
   };
@@ -80,7 +80,11 @@ describe('CasalService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CasalService,
-        { provide: PrismaService, useValue: prismaMock },
+        { provide: PessoaRepository, useValue: pessoaRepositoryMock },
+        {
+          provide: PessoaCasalRepository,
+          useValue: pessoaCasalRepositoryMock,
+        },
         { provide: PessoaService, useValue: pessoaServiceMock },
         { provide: SaoPedroPessoaService, useValue: saoPedroPessoaServiceMock },
         { provide: ComunidadeService, useValue: comunidadeServiceMock },
@@ -89,7 +93,10 @@ describe('CasalService', () => {
     }).compile();
 
     service = await module.resolve<CasalService>(CasalService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    pessoaRepository = module.get<PessoaRepository>(PessoaRepository);
+    pessoaCasalRepository = module.get<PessoaCasalRepository>(
+      PessoaCasalRepository,
+    );
     saoPedroPessoaService = module.get<SaoPedroPessoaService>(
       SaoPedroPessoaService,
     );
@@ -100,7 +107,8 @@ describe('CasalService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-    expect(prismaService).toBeDefined();
+    expect(pessoaRepository).toBeDefined();
+    expect(pessoaCasalRepository).toBeDefined();
     expect(saoPedroPessoaService).toBeDefined();
     expect(comunidadeService).toBeDefined();
     expect(abilityService).toBeDefined();
@@ -128,7 +136,7 @@ describe('CasalService', () => {
       expect(
         pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
       ).toHaveBeenCalledWith(2);
-      expect(prismaMock.pessoaCasal.create).toHaveBeenCalled();
+      expect(pessoaCasalRepositoryMock.create).toHaveBeenCalled();
     });
 
     it('SECRETARIA_CNC cria casal com uma pessoa fora do escopo', async () => {
@@ -144,8 +152,8 @@ describe('CasalService', () => {
       await expect(service.createCasal(createCasalDto)).rejects.toThrow(
         ForbiddenException,
       );
-      expect(prismaMock.pessoaCasal.create).not.toHaveBeenCalled();
-      expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(pessoaCasalRepositoryMock.create).not.toHaveBeenCalled();
+      expect(pessoaRepositoryMock.findUniqueOrThrowPorId).not.toHaveBeenCalled();
     });
 
     it('SECRETARIA_CNC cria casal com as duas pessoas fora do escopo', async () => {
@@ -158,8 +166,8 @@ describe('CasalService', () => {
       await expect(service.createCasal(createCasalDto)).rejects.toThrow(
         ForbiddenException,
       );
-      expect(prismaMock.pessoaCasal.create).not.toHaveBeenCalled();
-      expect(prismaMock.pessoa.findUniqueOrThrow).not.toHaveBeenCalled();
+      expect(pessoaCasalRepositoryMock.create).not.toHaveBeenCalled();
+      expect(pessoaRepositoryMock.findUniqueOrThrowPorId).not.toHaveBeenCalled();
     });
 
     it('SECRETARIA_CNC cria casal com uma pessoa sem vínculo ativo', async () => {
@@ -200,7 +208,7 @@ describe('CasalService', () => {
       await expect(service.createCasal(createCasalDto)).rejects.toBe(
         notFoundError,
       );
-      expect(prismaMock.pessoaCasal.create).not.toHaveBeenCalled();
+      expect(pessoaCasalRepositoryMock.create).not.toHaveBeenCalled();
     });
 
     it('perfil sem permissão de criação de casal é rejeitado', async () => {
@@ -216,7 +224,7 @@ describe('CasalService', () => {
       expect(
         pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao,
       ).not.toHaveBeenCalled();
-      expect(prismaMock.pessoaCasal.create).not.toHaveBeenCalled();
+      expect(pessoaCasalRepositoryMock.create).not.toHaveBeenCalled();
     });
   });
 
@@ -234,7 +242,7 @@ describe('CasalService', () => {
       saoPedroPessoaServiceMock.getExternalPessoasEstadoCivilCasado.mockResolvedValue(
         externalPessoas,
       );
-      prismaMock.pessoa.findMany.mockResolvedValue([]);
+      pessoaRepositoryMock.findManyElegiveisCasal.mockResolvedValue([]);
     });
 
     it('SECRETARIA_CNC filtra cônjuges pelas paróquias do usuário', async () => {
@@ -243,11 +251,11 @@ describe('CasalService', () => {
         id: 1,
         externalId: 'uuid-pessoa',
       };
-      prismaMock.pessoa.findMany.mockResolvedValue([pessoaElegivel]);
+      pessoaRepositoryMock.findManyElegiveisCasal.mockResolvedValue([pessoaElegivel]);
 
       const result = await service.findAllBySexoEstadoCivilCasado('M');
 
-      expect(prismaMock.pessoa.findMany).toHaveBeenCalledWith(
+      expect(pessoaRepositoryMock.findManyElegiveisCasal).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             AND: expect.arrayContaining([
@@ -286,7 +294,7 @@ describe('CasalService', () => {
 
       const result = await service.findAllBySexoEstadoCivilCasado('M');
 
-      expect(prismaMock.pessoa.findMany).toHaveBeenCalledWith(
+      expect(pessoaRepositoryMock.findManyElegiveisCasal).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             AND: expect.arrayContaining([
@@ -320,7 +328,7 @@ describe('CasalService', () => {
 
       const result = await service.findAllBySexoEstadoCivilCasado('M');
 
-      const where = prismaMock.pessoa.findMany.mock.calls[0][0].where;
+      const where = pessoaRepositoryMock.findManyElegiveisCasal.mock.calls[0][0].where;
       expect(where.AND[2]).toEqual({});
       expect(result).toEqual([]);
     });

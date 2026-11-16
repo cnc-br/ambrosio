@@ -2,7 +2,6 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { EstadoCivilEnum, Pessoa } from 'neocatecumenal';
 import { BaseService } from 'src/commons/base.service.js';
 import { SEXO_ENUM } from 'src/commons/enums/enums.js';
-import { PrismaService } from 'src/prisma.service.js';
 import { Prisma } from 'src/prisma/generated-client.js';
 import { CreateCasalDto } from '../dto/create-casal.dto.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
@@ -10,11 +9,14 @@ import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.j
 import { serializePessoasListResponse } from '../pessoa.serializer.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { PessoaService } from '../pessoa.service.js';
+import { PessoaRepository } from '../repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from '../repositories/pessoa-casal.repository.js';
 
 @Injectable()
 export class CasalService extends BaseService {
   constructor(
-    private prisma: PrismaService,
+    private readonly pessoaRepository: PessoaRepository,
+    private readonly pessoaCasalRepository: PessoaCasalRepository,
     private readonly saoPedroPessoaService: SaoPedroPessoaService,
     private readonly comunidadeService: ComunidadeService,
     private readonly pessoaService: PessoaService,
@@ -34,12 +36,8 @@ export class CasalService extends BaseService {
     ]);
 
     const [pessoa, conjugue] = await Promise.all([
-      this.prisma.pessoa.findUniqueOrThrow({
-        where: { id: pessoaId },
-      }),
-      this.prisma.pessoa.findUniqueOrThrow({
-        where: { id: conjugueId },
-      }),
+      this.pessoaRepository.findUniqueOrThrowPorId(pessoaId),
+      this.pessoaRepository.findUniqueOrThrowPorId(conjugueId),
     ]);
 
     const [pessoaExternal, conjugueExternal] = await Promise.all([
@@ -73,8 +71,9 @@ export class CasalService extends BaseService {
       );
     }
 
-    const casal = await this.prisma.pessoaCasal.create({
-      data: { pessoaMaridoId, pessoaMulherId },
+    const casal = await this.pessoaCasalRepository.create({
+      pessoaMaridoId,
+      pessoaMulherId,
     });
 
     await this.juntarCasalNaMesmaComunidade(conjugue.id, pessoa.id);
@@ -120,11 +119,7 @@ export class CasalService extends BaseService {
           },
         };
 
-    const pessoas = await this.prisma.pessoa.findMany({
-      select: {
-        id: true,
-        externalId: true,
-      },
+    const pessoas = await this.pessoaRepository.findManyElegiveisCasal({
       where: {
         externalId: {
           in: externalIds,
@@ -188,23 +183,21 @@ export class CasalService extends BaseService {
       );
     }
 
-    const existingConjugue = await this.prisma.pessoaCasal.findFirst({
-      where: {
-        OR: [
-          {
-            pessoaMaridoId: pessoaId,
-          },
-          {
-            pessoaMaridoId: conjugueId,
-          },
-          {
-            pessoaMulherId: pessoaId,
-          },
-          {
-            pessoaMulherId: conjugueId,
-          },
-        ],
-      },
+    const existingConjugue = await this.pessoaCasalRepository.findFirst({
+      OR: [
+        {
+          pessoaMaridoId: pessoaId,
+        },
+        {
+          pessoaMaridoId: conjugueId,
+        },
+        {
+          pessoaMulherId: pessoaId,
+        },
+        {
+          pessoaMulherId: conjugueId,
+        },
+      ],
     });
 
     if (existingConjugue) {

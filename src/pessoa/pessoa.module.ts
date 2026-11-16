@@ -9,10 +9,18 @@ import { SaoPedroModule } from 'src/external/sao-pedro/sao-pedro.module.js';
 import { ComunidadeModule } from 'src/comunidade/comunidade.module.js';
 import { CasalService } from './casal/casal.service.js';
 import { ContatoService } from './contato/contato.service.js';
+import { PessoaRepository } from './repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from './repositories/pessoa-casal.repository.js';
 
 @Module({
   controllers: [PessoaController],
-  providers: [PessoaService, CasalService, ContatoService],
+  providers: [
+    PessoaService,
+    CasalService,
+    ContatoService,
+    PessoaRepository,
+    PessoaCasalRepository,
+  ],
   exports: [PessoaService],
   imports: [
     EscolaridadeModule,
