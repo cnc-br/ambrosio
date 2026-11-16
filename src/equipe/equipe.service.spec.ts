@@ -4,6 +4,8 @@ import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.j
 import { PrismaService } from 'src/prisma.service.js';
 import { TipoEquipeService } from 'src/configuracoes/tipo-equipe/tipo-equipe.service.js';
 import { PessoaService } from 'src/pessoa/pessoa.service.js';
+import { PessoaRepository } from 'src/pessoa/repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from 'src/pessoa/repositories/pessoa-casal.repository.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
@@ -24,6 +26,8 @@ describe('EquipeService', () => {
         CaslAbilityService,
         TipoEquipeService,
         PessoaService,
+        { provide: PessoaRepository, useValue: {} },
+        { provide: PessoaCasalRepository, useValue: {} },
         { provide: ComunidadeService, useValue: {} },
         SaoPedroPessoaService,
         SaoPedroAuthService,

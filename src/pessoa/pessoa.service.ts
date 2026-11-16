@@ -1,27 +1,27 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { CreatePessoaDto } from './dto/create-pessoa.dto.js';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto.js';
-import { PrismaService } from 'src/prisma.service.js';
 import { SEXO_ENUM } from 'src/commons/enums/enums.js';
 import { LIMIT_DEFAULT, PAGE_DEFAULT } from 'src/commons/constants/constants.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { accessibleBy } from '@casl/prisma';
 import { Pessoa, PessoaConjugue, PessoaContato } from 'neocatecumenal';
-import { pessoa, situacaoReligiosa } from 'src/prisma/generated-client.js';
+import { situacaoReligiosa } from 'src/prisma/generated-client.js';
 import { SituacaoReligiosaService } from 'src/configuracoes/situacao-religiosa/situacao-religiosa.service.js';
 import { ComunidadeService } from 'src/comunidade/comunidade.service.js';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 import { SaoPedroContatoService } from 'src/external/sao-pedro/sao-pedro-contato.service.js';
 import { BaseService } from 'src/commons/base.service.js';
 import { serializePessoaResponse } from './pessoa.serializer.js';
-import { ENDERECO_INCLUDE, PESSOA_CARISMA_INCLUDE } from 'src/prisma/includes.js';
-import { PAROQUIA_SELECT } from 'src/prisma/selects/paroquia.select.js';
 import { isValidCPF } from 'src/commons/utils/is-valid-cpf.js';
+import { PessoaRepository } from './repositories/pessoa.repository.js';
+import { PessoaCasalRepository } from './repositories/pessoa-casal.repository.js';
 
 @Injectable()
 export class PessoaService extends BaseService {
   constructor(
-    private prisma: PrismaService,
+    private readonly pessoaRepository: PessoaRepository,
+    private readonly pessoaCasalRepository: PessoaCasalRepository,
     private situacaoReligiosaService: SituacaoReligiosaService,
     private readonly saoPedroPessoaService: SaoPedroPessoaService,
     private readonly saoPedroContatoService: SaoPedroContatoService,
@@ -83,13 +83,11 @@ export class PessoaService extends BaseService {
       const external =
         await this.saoPedroPessoaService.createExternalPessoa(createPessoaDto);
 
-      const pessoa = await this.prisma.pessoa.create({
-        data: {
-          externalId: external.externalId,
-          situacaoReligiosaId: situacaoReligiosa.id,
-          cadastradoPorId: userId,
-          atualizadoPorId: userId,
-        },
+      const pessoa = await this.pessoaRepository.create({
+        externalId: external.externalId,
+        situacaoReligiosaId: situacaoReligiosa.id,
+        cadastradoPorId: userId,
+        atualizadoPorId: userId,
       });
       this.logger.log(
         `Pessoa ${external.nome} UUID: ${external.externalId} criada com ID ${pessoa.id}`,
@@ -116,7 +114,7 @@ export class PessoaService extends BaseService {
         `Falha ao vincular pessoa ${pessoaId} na comunidade ${comunidadeId}. Desfazendo cadastro da pessoa.`,
         error,
       );
-      await this.prisma.pessoa.delete({ where: { id: pessoaId } });
+      await this.pessoaRepository.deletePorId(pessoaId);
       throw error;
     }
   }
@@ -136,22 +134,10 @@ export class PessoaService extends BaseService {
       `Total de pessoas externas encontradas: ${externalPessoas.length}`,
     );
 
-    const results = await this.prisma.pessoa.findMany({
+    const results = await this.pessoaRepository.findManyParaListagem({
+      where,
       skip,
       take: limit,
-      where,
-      include: {
-        situacaoReligiosa: true,
-        pessoaCarismas: PESSOA_CARISMA_INCLUDE,
-        enderecos: {
-          include: {
-            endereco: ENDERECO_INCLUDE,
-          },
-        },
-      },
-      orderBy: {
-        id: 'desc',
-      },
     });
 
     // Monta um dicionário com externalId como chave
@@ -183,9 +169,9 @@ export class PessoaService extends BaseService {
       return null;
     }
 
-    const pessoa = await this.prisma.pessoa.findUnique({
-      where: { externalId: externalPessoa.externalId },
-    });
+    const pessoa = await this.pessoaRepository.findUniquePorExternalId(
+      externalPessoa.externalId,
+    );
     if (!pessoa) {
       return null;
     }
@@ -204,29 +190,7 @@ export class PessoaService extends BaseService {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async findBy(where: any): Promise<Pessoa> {
-    const pessoa: pessoa = await this.prisma.pessoa.findUniqueOrThrow({
-      where,
-      include: {
-        situacaoReligiosa: true,
-        pessoaCarismas: PESSOA_CARISMA_INCLUDE,
-        comunidadePessoas: {
-          include: {
-            comunidade: {
-              include: {
-                paroquia: {
-                  select: PAROQUIA_SELECT,
-                },
-              },
-            },
-          },
-        },
-        enderecos: {
-          include: {
-            endereco: ENDERECO_INCLUDE,
-          },
-        },
-      },
-    });
+    const pessoa = await this.pessoaRepository.findDetalhadoOrThrow(where);
 
     const externalPessoa =
       await this.saoPedroPessoaService.findExternalPessoaByUuid(
@@ -263,11 +227,8 @@ export class PessoaService extends BaseService {
       this.logger.log(
         `Atualizando situação religiosa da pessoa ID ${id} para ${situacaoReligiosa.descricao}`,
       );
-      await this.prisma.pessoa.update({
-        where: { id },
-        data: {
-          situacaoReligiosaId: situacaoReligiosa.id,
-        },
+      await this.pessoaRepository.updatePorId(id, {
+        situacaoReligiosaId: situacaoReligiosa.id,
       });
     }
 
@@ -276,11 +237,8 @@ export class PessoaService extends BaseService {
       updatePessoaDto,
     );
 
-    await this.prisma.pessoa.update({
-      where: { id },
-      data: {
-        atualizadoPorId: userId,
-      },
+    await this.pessoaRepository.updatePorId(id, {
+      atualizadoPorId: userId,
     });
 
     return pessoa;
@@ -300,12 +258,13 @@ export class PessoaService extends BaseService {
       'update',
     ).pessoa;
 
-    const pessoaNoEscopo = await this.prisma.pessoa.findFirst({
-      where: { AND: [{ id }, updateScope] },
-    });
+    const pessoaNoEscopo = await this.pessoaRepository.findNoEscopo(
+      id,
+      updateScope,
+    );
 
     if (!pessoaNoEscopo) {
-      await this.prisma.pessoa.findUniqueOrThrow({ where: { id } });
+      await this.pessoaRepository.findUniqueOrThrowPorId(id);
       throw new ForbiddenException(
         'Você não tem permissão para atualizar pessoa fora das suas paróquias.',
       );
@@ -336,7 +295,7 @@ export class PessoaService extends BaseService {
         ? { pessoaMaridoId: pessoaId }
         : { pessoaMulherId: pessoaId };
 
-    const casal = await this.prisma.pessoaCasal.findFirst({ where });
+    const casal = await this.pessoaCasalRepository.findFirst(where);
 
     if (!casal) {
       this.logger.warn(
@@ -345,18 +304,11 @@ export class PessoaService extends BaseService {
       return null;
     }
 
-    const conjugue = await this.prisma.pessoa.findUniqueOrThrow({
-      select: {
-        id: true,
-        externalId: true,
-      },
-      where: {
-        id:
-          sexoPessoa === SEXO_ENUM.MASCULINO
-            ? casal.pessoaMulherId
-            : casal.pessoaMaridoId,
-      },
-    });
+    const conjugue = await this.pessoaRepository.findBasicoPorIdOrThrow(
+      sexoPessoa === SEXO_ENUM.MASCULINO
+        ? casal.pessoaMulherId
+        : casal.pessoaMaridoId,
+    );
     const externalConjugue =
       await this.saoPedroPessoaService.findExternalPessoaByUuid(
         conjugue.externalId,
@@ -379,6 +331,7 @@ export class PessoaService extends BaseService {
     }
 
     const pessoa = await this.findOneByCpf(cpf);
+    this.logger.debug(`Resultado da busca por CPF ${cpf}: ${pessoa ? 'Encontrado' : 'Não encontrado'}`);
     if (pessoa) {
       this.logger.warn(
         `CPF ${cpf} já está cadastrado. Pertence a: ${pessoa.nome} (ID: ${pessoa.id})`,
