@@ -41,7 +41,6 @@ export class PessoaService extends BaseService {
     const situacaoReligiosa = await this.situacaoReligiosaService.findOne(
       createPessoaDto.situacaoReligiosa.id,
     );
-    await this.analisarCPF(createPessoaDto.cpf);
 
     if (comunidadeId !== undefined) {
       await this.validarVinculoComunidade(comunidadeId);
@@ -74,10 +73,11 @@ export class PessoaService extends BaseService {
    * Cria a pessoa na API externa (São Pedro) e na tabela local e serializa a
    * resposta. Responsabilidade isolada do fluxo de criação.
    *
-   * A criação externa é idempotente por CPF: se um registro externo já existe
-   * (caso de retry após uma escrita local ter falhado em tentativa anterior), ele
-   * é reutilizado em vez de duplicado. A falha na escrita local é repropagada para
-   * quem chamou, evitando que um registro externo órfão fique sem contraparte local.
+   * A resolução da pessoa externa é idempotente por CPF: se um registro externo já
+   * existe, ele é reutilizado em vez de duplicado (caso de retry após uma escrita
+   * local ter falhado em tentativa anterior). A falha na escrita local é repropagada
+   * para quem chamou, evitando que um registro externo órfão fique sem contraparte
+   * local.
    */
   private async criarPessoaCompleta(
     createPessoaDto: CreatePessoaDto,
@@ -107,26 +107,51 @@ export class PessoaService extends BaseService {
   }
 
   /**
-   * Retorna a pessoa externa já cadastrada para o CPF informado quando ela existe,
-   * ou cria uma nova. Isso torna a criação externa idempotente: um retry após uma
-   * falha de escrita local reutiliza o registro externo anterior em vez de POSTar
-   * uma duplicata. Sem CPF informado, sempre cria um novo registro externo.
+   * Retorna a pessoa externa para o CPF informado, validando e reusando um
+   * registro já existente ou criando um novo. Isso torna a criação externa
+   * idempotente: um retry após uma falha de escrita local reutiliza o registro
+   * externo anterior em vez de POSTar uma duplicata.
+   *
+   * - Sem CPF informado: sempre cria um novo registro externo.
+   * - CPF inválido: lança `BadRequestException`.
+   * - CPF já associado a uma pessoa local: lança `ConflictException`.
+   * - CPF com registro externo, mas sem pessoa local (retry pós-falha): reutiliza
+   *   o registro externo existente.
    */
   private async obterOuCriarPessoaExterna(
     createPessoaDto: CreatePessoaDto,
   ): Promise<Pessoa> {
     if (createPessoaDto.cpf) {
+      if (!isValidCPF(createPessoaDto.cpf)) {
+        throw new BadRequestException('CPF inválido');
+      }
+
       const existente =
         await this.saoPedroPessoaService.getExternalPessoaByCpf(
           createPessoaDto.cpf,
         );
+
       if (existente) {
+        const pessoaLocal = await this.pessoaRepository.findUniquePorExternalId(
+          existente.externalId,
+        );
+
+        if (pessoaLocal) {
+          this.logger.warn(
+            `CPF ${createPessoaDto.cpf} já está cadastrado. Pertence a: ${existente.nome} (ID: ${pessoaLocal.id})`,
+          );
+          throw new ConflictException(
+            `O CPF ja registrado para ${existente.nome} de id: ${pessoaLocal.id}`,
+          );
+        }
+
         this.logger.warn(
           `Pessoa externa já existente para CPF ${createPessoaDto.cpf}, reutilizando externalId ${existente.externalId}`,
         );
         return existente;
       }
     }
+
     return this.saoPedroPessoaService.createExternalPessoa(createPessoaDto);
   }
 
