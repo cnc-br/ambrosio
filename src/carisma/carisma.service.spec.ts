@@ -42,7 +42,7 @@ describe('CarismaService', () => {
       expect(service).toBeDefined();
     });
 
-    it('SECRETARIA_CNC dentro do escopo adiciona carismas', async () => {
+    it('SECRETARIA_PAROQUIA dentro do escopo adiciona carismas', async () => {
       pessoaService.validarPessoaDentroDoEscopoDeAtualizacao.mockResolvedValue({
         id: 1,
       });
@@ -66,7 +66,7 @@ describe('CarismaService', () => {
       ).toHaveBeenCalledWith(1);
     });
 
-    it('SECRETARIA_CNC fora do escopo lança 403 sem escrever', async () => {
+    it('SECRETARIA_PAROQUIA fora do escopo lança 403 sem escrever', async () => {
       pessoaService.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
         new ForbiddenException('fora do escopo'),
       );

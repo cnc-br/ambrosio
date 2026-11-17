@@ -128,11 +128,11 @@ describe('PessoaUpdateScope (e2e)', () => {
 
     const secretaria2 = await prisma.user.upsert({
       where: { email: 'secretaria2@admin.com' },
-      update: { role: 'SECRETARIA_CNC', active: true },
+      update: { role: 'SECRETARIA_PAROQUIA', active: true },
       create: {
         email: 'secretaria2@admin.com',
         password: ADMIN_PASSWORD_HASH,
-        role: 'SECRETARIA_CNC',
+        role: 'SECRETARIA_PAROQUIA',
         active: true,
       },
     });
@@ -317,7 +317,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     vi.clearAllMocks();
   });
 
-  it(`${principal} (GET) - SECRETARIA_CNC da paróquia 1 lista todas as pessoas`, async () => {
+  it(`${principal} (GET) - SECRETARIA_PAROQUIA da paróquia 1 lista todas as pessoas`, async () => {
     const response = await request(app.getHttpServer())
       .get(`/${principal}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`);
@@ -329,7 +329,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     );
   });
 
-  it(`${principal} (GET) - SECRETARIA_CNC da paróquia 2 lista todas as pessoas`, async () => {
+  it(`${principal} (GET) - SECRETARIA_PAROQUIA da paróquia 2 lista todas as pessoas`, async () => {
     const response = await request(app.getHttpServer())
       .get(`/${principal}`)
       .set('Authorization', `Bearer ${tokenSecretaria2}`);
@@ -340,7 +340,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     );
   });
 
-  it(`${principal}/:id (GET) - SECRETARIA_CNC da paróquia 1 detalha pessoa de outra paróquia`, async () => {
+  it(`${principal}/:id (GET) - SECRETARIA_PAROQUIA da paróquia 1 detalha pessoa de outra paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .get(`/${principal}/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`);
@@ -349,7 +349,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.body.data.id).toBe(pessoaOutra.id);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC atualiza pessoa da própria paróquia`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA atualiza pessoa da própria paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaPropria.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -364,7 +364,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(atualizada.atualizadoPorId).toBe(secretaria1UserId);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC da paróquia 1 não atualiza pessoa de outra paróquia`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA da paróquia 1 não atualiza pessoa de outra paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -375,7 +375,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC da paróquia 2 atualiza pessoa da própria paróquia`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA da paróquia 2 atualiza pessoa da própria paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria2}`)
@@ -390,7 +390,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(atualizada.atualizadoPorId).toBe(secretaria2UserId);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC da paróquia 2 não atualiza pessoa de outra paróquia`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA da paróquia 2 não atualiza pessoa de outra paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaPropria.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria2}`)
@@ -400,7 +400,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC atualiza pessoa sem vínculo ativo`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA atualiza pessoa sem vínculo ativo`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaSemVinculo.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -409,7 +409,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.status).toBe(200);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC atualiza pessoa com vínculo apenas encerrado`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA atualiza pessoa com vínculo apenas encerrado`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaVinculoEncerrado.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -418,7 +418,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.status).toBe(200);
   });
 
-  it(`${principal}/:id (PATCH) - SECRETARIA_CNC atualiza pessoa com vínculos ativos em paróquias próprias e de terceiros`, async () => {
+  it(`${principal}/:id (PATCH) - SECRETARIA_PAROQUIA atualiza pessoa com vínculos ativos em paróquias próprias e de terceiros`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaPropriaETerceira.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -447,7 +447,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.body.statusCode).toBe(404);
   });
 
-  it(`${principal}/conjugue (GET) - SECRETARIA_CNC da paróquia 1 lista apenas cônjuges da própria paróquia`, async () => {
+  it(`${principal}/conjugue (GET) - SECRETARIA_PAROQUIA da paróquia 1 lista apenas cônjuges da própria paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .get(`/${principal}/conjugue?sexo=M`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`);
@@ -458,7 +458,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(ids).not.toContain(pessoaOutra.id);
   });
 
-  it(`${principal}/conjugue (GET) - SECRETARIA_CNC da paróquia 2 lista apenas cônjuges da própria paróquia`, async () => {
+  it(`${principal}/conjugue (GET) - SECRETARIA_PAROQUIA da paróquia 2 lista apenas cônjuges da própria paróquia`, async () => {
     const response = await request(app.getHttpServer())
       .get(`/${principal}/conjugue?sexo=M`)
       .set('Authorization', `Bearer ${tokenSecretaria2}`);
@@ -480,7 +480,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(ids).toContain(pessoaOutra.id);
   });
 
-  it(`${principal}/casal (POST) - SECRETARIA_CNC cria casal com as duas pessoas no escopo`, async () => {
+  it(`${principal}/casal (POST) - SECRETARIA_PAROQUIA cria casal com as duas pessoas no escopo`, async () => {
     const response = await request(app.getHttpServer())
       .post(`/${principal}/casal`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -491,7 +491,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.body.data).toHaveProperty('pessoaMulherId');
   });
 
-  it(`${principal}/casal (POST) - SECRETARIA_CNC não cria casal com uma pessoa fora do escopo`, async () => {
+  it(`${principal}/casal (POST) - SECRETARIA_PAROQUIA não cria casal com uma pessoa fora do escopo`, async () => {
     const response = await request(app.getHttpServer())
       .post(`/${principal}/casal`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -502,7 +502,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it(`${principal}/:id/contato (POST) - SECRETARIA_CNC cria contato em pessoa do escopo`, async () => {
+  it(`${principal}/:id/contato (POST) - SECRETARIA_PAROQUIA cria contato em pessoa do escopo`, async () => {
     const response = await request(app.getHttpServer())
       .post(`/${principal}/${pessoaPropria.id}/contato`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -512,7 +512,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(mockSaoPedroContatoService.createExternalContato).toHaveBeenCalled();
   });
 
-  it(`${principal}/:id/contato (POST) - SECRETARIA_CNC não cria contato em pessoa fora do escopo`, async () => {
+  it(`${principal}/:id/contato (POST) - SECRETARIA_PAROQUIA não cria contato em pessoa fora do escopo`, async () => {
     const response = await request(app.getHttpServer())
       .post(`/${principal}/${pessoaOutra.id}/contato`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -525,7 +525,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_CNC atualiza contato em pessoa do escopo`, async () => {
+  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_PAROQUIA atualiza contato em pessoa do escopo`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaPropria.id}/contato/9001`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -535,7 +535,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(mockSaoPedroContatoService.updateExternalContato).toHaveBeenCalled();
   });
 
-  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_CNC não atualiza contato em pessoa fora do escopo`, async () => {
+  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_PAROQUIA não atualiza contato em pessoa fora do escopo`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaOutra.id}/contato/9001`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -548,7 +548,7 @@ describe('PessoaUpdateScope (e2e)', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_CNC não atualiza contato de outra pessoa`, async () => {
+  it(`${principal}/:id/contato/:contatoId (PATCH) - SECRETARIA_PAROQUIA não atualiza contato de outra pessoa`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaPropria.id}/contato/9002`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)

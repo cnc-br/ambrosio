@@ -48,4 +48,6 @@ Usa os 5 papéis canônicos de triagem: `needs-triage`, `needs-info`, `ready-for
 Consulte [`docs/agents/domain.md`](docs/agents/domain.md) e [`CONTEXT.md`](https://github.com/cnc-br/catarina/blob/main/CONTEXT.md). Use estritamente:
 - **Usuário**: Credencial de acesso (email, WhatsApp, papel).
 - **Pessoa**: Fiel cadastrado na base (schema `saopedro`).
-- **Papel**: Nível de autorização (`ADMIN`, `SECRETARIA_CNC`, `NAO_IDENTIFICADO`).
+- **Papel**: Nível de autorização (`ADMIN`, `SECRETARIA_PAROQUIA`, `SECRETARIA_CNC`, `NAO_IDENTIFICADO`).
+  - `SECRETARIA_PAROQUIA`: secretaria local, com escopo pelas paróquias vinculadas em `usuarioParoquia`.
+  - `SECRETARIA_CNC`: secretaria por setor, com escopo pelas paróquias dos setores vinculados em `usuarioSetor` e com gestão (criação, atualização e exclusão) de paróquias.

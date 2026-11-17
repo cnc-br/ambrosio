@@ -1,4 +1,5 @@
 import { HttpException, Injectable } from '@nestjs/common';
+import { accessibleBy } from '@casl/prisma';
 import { EstadoCivilEnum, Pessoa } from 'neocatecumenal';
 import { BaseService } from 'src/commons/base.service.js';
 import { SEXO_ENUM } from 'src/commons/enums/enums.js';
@@ -96,28 +97,24 @@ export class CasalService extends BaseService {
 
     const externalIds = externalPessoas.map((pessoa) => pessoa.externalId);
 
-    const { ability, userId } = this.abilityService;
-    const escopoParoquia: Prisma.pessoaWhereInput = ability.can(
-      'manage',
-      'all',
-    )
+    // Projeção única do escopo de paróquia do perfil (paróquias do usuário ou
+    // paróquias dos setores vinculados), mantendo `ADMIN` irrestrito.
+    const { ability } = this.abilityService;
+    const paroquiaScope = ability.can('manage', 'all')
       ? {}
-      : {
-          comunidadePessoas: {
-            some: {
-              dataSaida: null,
-              comunidade: {
-                is: {
-                  paroquia: {
-                    is: {
-                      usuarioParoquias: { some: { userId } },
-                    },
-                  },
-                },
-              },
+      : accessibleBy(ability, 'read').paroquia;
+    const escopoParoquia: Prisma.pessoaWhereInput = {
+      comunidadePessoas: {
+        some: {
+          dataSaida: null,
+          comunidade: {
+            is: {
+              paroquia: { is: paroquiaScope },
             },
           },
-        };
+        },
+      },
+    };
 
     const pessoas = await this.pessoaRepository.findManyElegiveisCasal({
       where: {

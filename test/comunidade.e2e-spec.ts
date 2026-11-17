@@ -42,11 +42,11 @@ describe('ComunidadeController (e2e)', () => {
 
     const semParoquia = await prisma.user.upsert({
       where: { email: 'secretaria-sem-paroquia@admin.com' },
-      update: { role: 'SECRETARIA_CNC', active: true },
+      update: { role: 'SECRETARIA_PAROQUIA', active: true },
       create: {
         email: 'secretaria-sem-paroquia@admin.com',
         password: ADMIN_PASSWORD_HASH,
-        role: 'SECRETARIA_CNC',
+        role: 'SECRETARIA_PAROQUIA',
         active: true,
       },
     });
@@ -95,7 +95,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) - 200 | SECRETARIA_CNC lista apenas comunidades das suas paroquias`, () => {
+  it(`/${principal} (GET) - 200 | SECRETARIA_PAROQUIA lista apenas comunidades das suas paroquias`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -110,7 +110,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) - 200 | SECRETARIA_CNC sem paroquia lista vazio`, () => {
+  it(`/${principal} (GET) - 200 | SECRETARIA_PAROQUIA sem paroquia lista vazio`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}`)
       .set('Authorization', `Bearer ${tokenSemParoquia}`)
@@ -120,7 +120,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) - 200 | SECRETARIA_CNC filtra paroquia dentro do escopo`, () => {
+  it(`/${principal} (GET) - 200 | SECRETARIA_PAROQUIA filtra paroquia dentro do escopo`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}?paroquiaId=${paroquiaDoUsuario}`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -135,7 +135,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) - 200 | SECRETARIA_CNC filtra paroquia fora do escopo e recebe vazio`, () => {
+  it(`/${principal} (GET) - 200 | SECRETARIA_PAROQUIA filtra paroquia fora do escopo e recebe vazio`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}?paroquiaId=${paroquiaForaDoEscopo}`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -145,7 +145,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (GET) - 200 | SECRETARIA_CNC filtra numero da comunidade dentro do escopo`, () => {
+  it(`/${principal} (GET) - 200 | SECRETARIA_PAROQUIA filtra numero da comunidade dentro do escopo`, () => {
     return request(app.getHttpServer())
       .get(`/${principal}?numeroDaComunidade=1`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -167,7 +167,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra comunidade na propria paroquia`, async () => {
+  it(`/${principal} (POST) - 201 | SECRETARIA_PAROQUIA cadastra comunidade na propria paroquia`, async () => {
     const numerosUsados = await prisma.comunidade.findMany({
       where: { paroquiaId: paroquiaDoUsuario },
       select: { numeroDaComunidade: true },
@@ -191,7 +191,7 @@ describe('ComunidadeController (e2e)', () => {
     expect(response.body.data.paroquia.id).toBe(paroquiaDoUsuario);
   });
 
-  it(`/${principal} (POST) - 403 | SECRETARIA_CNC nao cadastra comunidade fora das suas paroquias`, () => {
+  it(`/${principal} (POST) - 403 | SECRETARIA_PAROQUIA nao cadastra comunidade fora das suas paroquias`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -208,7 +208,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) - 404 | SECRETARIA_CNC nao cadastra comunidade com paroquia inexistente`, () => {
+  it(`/${principal} (POST) - 404 | SECRETARIA_PAROQUIA nao cadastra comunidade com paroquia inexistente`, () => {
     return request(app.getHttpServer())
       .post(`/${principal}`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -227,7 +227,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC atualiza comunidade da propria paroquia`, async () => {
+  it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_PAROQUIA atualiza comunidade da propria paroquia`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: paroquiaDoUsuario },
     });
@@ -240,7 +240,7 @@ describe('ComunidadeController (e2e)', () => {
       .expect(200);
   });
 
-  it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC nao atualiza comunidade fora das suas paroquias`, async () => {
+  it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_PAROQUIA nao atualiza comunidade fora das suas paroquias`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: paroquiaForaDoEscopo },
     });
@@ -335,7 +335,7 @@ describe('ComunidadeController (e2e)', () => {
       .expect(200);
   });
 
-  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 201 | SECRETARIA_CNC adiciona pessoa em comunidade da propria paroquia`, async () => {
+  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 201 | SECRETARIA_PAROQUIA adiciona pessoa em comunidade da propria paroquia`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: paroquiaDoUsuario },
     });
@@ -361,7 +361,7 @@ describe('ComunidadeController (e2e)', () => {
       .expect(200);
   });
 
-  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 403 | SECRETARIA_CNC nao adiciona pessoa em comunidade fora das suas paroquias`, async () => {
+  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 403 | SECRETARIA_PAROQUIA nao adiciona pessoa em comunidade fora das suas paroquias`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: paroquiaForaDoEscopo },
     });
@@ -377,7 +377,7 @@ describe('ComunidadeController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 403 | SECRETARIA_CNC nao adiciona pessoa de outra paroquia a comunidade da propria paroquia`, async () => {
+  it(`/${principal}/:id/pessoa/:pessoaId (POST) - 403 | SECRETARIA_PAROQUIA nao adiciona pessoa de outra paroquia a comunidade da propria paroquia`, async () => {
     const comunidade = await prisma.comunidade.findFirstOrThrow({
       where: { paroquiaId: paroquiaDoUsuario },
     });
@@ -414,7 +414,7 @@ describe('ComunidadeController (e2e)', () => {
     await prisma.pessoa.delete({ where: { id: pessoaOutra.id } });
   });
 
-  it(`/${principal}/:id/pessoa/:pessoaId (DELETE) - 403 | SECRETARIA_CNC nao remove pessoa em comunidade fora das suas paroquias`, async () => {
+  it(`/${principal}/:id/pessoa/:pessoaId (DELETE) - 403 | SECRETARIA_PAROQUIA nao remove pessoa em comunidade fora das suas paroquias`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: paroquiaForaDoEscopo },
     });

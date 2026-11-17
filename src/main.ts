@@ -19,7 +19,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Ambrosio')
     .setDescription('The CNC API documentation')
-    .setVersion('1.15.0')
+    .setVersion('1.56.0')
     .addTag('cnc')
     .build();
   const document = SwaggerModule.createDocument(app, config);

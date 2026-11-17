@@ -249,7 +249,7 @@ describe('PessoaService', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (service as any).abilityService.createForUser({
       id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
+      role: UserRoleEnum.SECRETARIA_PAROQUIA,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
     pessoaRepositoryMock.findNoEscopo.mockResolvedValue(pessoaLocal);
   };
@@ -380,7 +380,7 @@ describe('PessoaService', () => {
     expect(pessoaRepositoryMock.updatePorId).not.toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC atualiza pessoa com vínculo ativo na paróquia do usuário', async () => {
+  it('SECRETARIA_PAROQUIA atualiza pessoa com vínculo ativo na paróquia do usuário', async () => {
     setSecretariaAbility();
     const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
       id: 1,
@@ -401,7 +401,7 @@ describe('PessoaService', () => {
     ).toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC atualiza pessoa sem vínculo ativo com comunidade', async () => {
+  it('SECRETARIA_PAROQUIA atualiza pessoa sem vínculo ativo com comunidade', async () => {
     setSecretariaAbility();
     const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
       id: 1,
@@ -418,7 +418,7 @@ describe('PessoaService', () => {
     ).toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC atualiza pessoa com vínculo apenas encerrado', async () => {
+  it('SECRETARIA_PAROQUIA atualiza pessoa com vínculo apenas encerrado', async () => {
     setSecretariaAbility();
     const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
       id: 1,
@@ -435,7 +435,7 @@ describe('PessoaService', () => {
     ).toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC atualiza pessoa com vínculos ativos em paróquias próprias e de terceiros', async () => {
+  it('SECRETARIA_PAROQUIA atualiza pessoa com vínculos ativos em paróquias próprias e de terceiros', async () => {
     setSecretariaAbility();
     const findOne = vi.spyOn(service, 'findOne').mockResolvedValue({
       id: 1,
@@ -452,7 +452,7 @@ describe('PessoaService', () => {
     ).toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC não atualiza pessoa com vínculo ativo em outra paróquia', async () => {
+  it('SECRETARIA_PAROQUIA não atualiza pessoa com vínculo ativo em outra paróquia', async () => {
     setSecretariaAbility();
     pessoaRepositoryMock.findNoEscopo.mockResolvedValue(null);
     pessoaRepositoryMock.findUniqueOrThrowPorId.mockResolvedValue(pessoaLocal);

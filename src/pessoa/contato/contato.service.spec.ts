@@ -172,7 +172,7 @@ describe('ContatoService', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC cria contato em pessoa fora do escopo', async () => {
+  it('SECRETARIA_PAROQUIA cria contato em pessoa fora do escopo', async () => {
     pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
       new ForbiddenException('Fora do escopo'),
     );
@@ -186,7 +186,7 @@ describe('ContatoService', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC cria contato em pessoa sem vínculo ativo', async () => {
+  it('SECRETARIA_PAROQUIA cria contato em pessoa sem vínculo ativo', async () => {
     const result = await service.create(1, { telefone: '11999999999' });
 
     expect(result).toEqual(contatoCriado);
@@ -204,7 +204,7 @@ describe('ContatoService', () => {
     ).toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC atualiza contato em pessoa fora do escopo', async () => {
+  it('SECRETARIA_PAROQUIA atualiza contato em pessoa fora do escopo', async () => {
     pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
       new ForbiddenException('Fora do escopo'),
     );
@@ -218,7 +218,7 @@ describe('ContatoService', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('SECRETARIA_CNC atualiza contato em pessoa sem vínculo ativo', async () => {
+  it('SECRETARIA_PAROQUIA atualiza contato em pessoa sem vínculo ativo', async () => {
     const result = await service.update(1, '1', {
       telefone: '11999999999',
     });

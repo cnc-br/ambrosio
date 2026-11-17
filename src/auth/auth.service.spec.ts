@@ -101,7 +101,7 @@ describe('AuthService', () => {
       usersServiceMock.findOneByEmail.mockResolvedValue({
         id: 'user-1',
         email: 'carmem@neocatecumenal.com.es',
-        role: 'SECRETARIA_CNC',
+        role: 'SECRETARIA_PAROQUIA',
       });
       usersServiceMock.setPasswordForRecovery.mockResolvedValue(undefined);
 

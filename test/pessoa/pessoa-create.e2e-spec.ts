@@ -64,11 +64,11 @@ describe('PessoaCreateController (e2e)', () => {
 
     const secretariaSemParoquia = await prisma.user.upsert({
       where: { email: 'secretaria-sem-paroquia-pessoa@admin.com' },
-      update: { role: 'SECRETARIA_CNC', active: true },
+      update: { role: 'SECRETARIA_PAROQUIA', active: true },
       create: {
         email: 'secretaria-sem-paroquia-pessoa@admin.com',
         password: ADMIN_PASSWORD_HASH,
-        role: 'SECRETARIA_CNC',
+        role: 'SECRETARIA_PAROQUIA',
         active: true,
       },
     });
@@ -225,7 +225,7 @@ describe('PessoaCreateController (e2e)', () => {
     // );
   });
 
-  it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra pessoa`, async () => {
+  it(`/${principal} (POST) - 201 | SECRETARIA_PAROQUIA cadastra pessoa`, async () => {
     const externalId = `e2e-pessoa-scnc-${Date.now()}`;
     const nome = 'Pessoa Secretaria CNC';
     const cpf = '10000000280';
@@ -253,7 +253,7 @@ describe('PessoaCreateController (e2e)', () => {
     expect(response.body.data).toHaveProperty('cpf', cpf);
   });
 
-  it(`/${principal} (POST) - 201 | SECRETARIA_CNC sem paroquia cadastra pessoa`, async () => {
+  it(`/${principal} (POST) - 201 | SECRETARIA_PAROQUIA sem paroquia cadastra pessoa`, async () => {
     const externalId = `e2e-pessoa-sp-${Date.now()}`;
     const nome = 'Pessoa Secretaria Sem Paroquia';
     const cpf = '10000000361';
@@ -314,7 +314,7 @@ describe('PessoaCreateController (e2e)', () => {
       });
   });
 
-  it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC atualiza pessoa`, async () => {
+  it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_PAROQUIA atualiza pessoa`, async () => {
     const response = await request(app.getHttpServer())
       .patch(`/${principal}/${pessoaParaAtualizar}`)
       .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
@@ -360,7 +360,7 @@ describe('PessoaCreateController (e2e)', () => {
       });
   });
 
-  it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra pessoa e vincula à comunidade da própria paróquia`, async () => {
+  it(`/${principal} (POST) - 201 | SECRETARIA_PAROQUIA cadastra pessoa e vincula à comunidade da própria paróquia`, async () => {
     const comunidade = await prisma.comunidade.findFirst({
       where: { paroquiaId: 1 },
     });
@@ -401,7 +401,7 @@ describe('PessoaCreateController (e2e)', () => {
     expect(vinculo).toBeDefined();
   });
 
-  it(`/${principal} (POST) - 403 | SECRETARIA_CNC não vincula pessoa a comunidade fora do escopo, sem criar a pessoa`, async () => {
+  it(`/${principal} (POST) - 403 | SECRETARIA_PAROQUIA não vincula pessoa a comunidade fora do escopo, sem criar a pessoa`, async () => {
     let comunidadeForaDoEscopo = await prisma.comunidade.findFirst({
       where: { paroquiaId: 2 },
     });

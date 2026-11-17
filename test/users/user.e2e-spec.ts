@@ -242,6 +242,116 @@ describe('UserController (e2e)', () => {
       });
   });
 
+  describe('/users/:id/setores (PATCH)', () => {
+    it('200 | substitui os setores vinculados ao usuário', async () => {
+      const setores = await prisma.setor.findMany({
+        orderBy: { id: 'asc' },
+        take: 2,
+      });
+      const [primeiroSetor, segundoSetor] = setores;
+
+      const response = await request(app.getHttpServer())
+        .patch(`/users/${createdUserId}/setores`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ setorIds: [primeiroSetor.id, segundoSetor.id] });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual({ count: 2 });
+
+      const vinculos = await prisma.usuarioSetor.findMany({
+        where: { userId: createdUserId },
+        orderBy: { setorId: 'asc' },
+      });
+      expect(vinculos.map((vinculo) => vinculo.setorId)).toEqual([
+        primeiroSetor.id,
+        segundoSetor.id,
+      ]);
+
+      const substituicao = await request(app.getHttpServer())
+        .patch(`/users/${createdUserId}/setores`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ setorIds: [segundoSetor.id] });
+
+      expect(substituicao.status).toBe(200);
+      expect(substituicao.body.data).toEqual({ count: 1 });
+
+      const vinculosAposSubstituicao = await prisma.usuarioSetor.findMany({
+        where: { userId: createdUserId },
+      });
+      expect(
+        vinculosAposSubstituicao.map((vinculo) => vinculo.setorId),
+      ).toEqual([segundoSetor.id]);
+    });
+
+    it('200 | lista vazia remove todos os setores do usuário', async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/users/${createdUserId}/setores`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ setorIds: [] });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual({ count: 0 });
+
+      const vinculos = await prisma.usuarioSetor.count({
+        where: { userId: createdUserId },
+      });
+      expect(vinculos).toBe(0);
+    });
+
+    it('404 | usuário inexistente não cria vínculos', async () => {
+      const response = await request(app.getHttpServer())
+        .patch('/users/usuario-inexistente/setores')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ setorIds: [1] });
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe(
+        `O registro de 'Usuário' não foi encontrado.`,
+      );
+      expect(response.body.statusCode).toBe(404);
+    });
+
+    it('400 | payload inválido não altera os vínculos', async () => {
+      const antes = await prisma.usuarioSetor.count({
+        where: { userId: createdUserId },
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/users/${createdUserId}/setores`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ setorIds: 'nao-e-um-array' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Bad Request');
+      expect(response.body.statusCode).toBe(400);
+
+      const depois = await prisma.usuarioSetor.count({
+        where: { userId: createdUserId },
+      });
+      expect(depois).toBe(antes);
+    });
+
+    it('403 | perfil sem permissão de update user não altera os vínculos', async () => {
+      const login = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'ronaldinho@admin.com', password: 'admin' });
+
+      const tokenSemPermissao = login.body.data.access_token;
+
+      const response = await request(app.getHttpServer())
+        .patch(`/users/${createdUserId}/setores`)
+        .set('Authorization', `Bearer ${tokenSemPermissao}`)
+        .send({ setorIds: [1] });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toBe(
+        'Você não tem permissão para update user',
+      );
+      expect(response.body.error).toBe('Forbidden');
+      expect(response.body.statusCode).toBe(403);
+    });
+  });
+
   it('/users/:id (DELETE) - 204 | exclui usuario sem corpo e remove vinculos usuario-paroquia', async () => {
     const deleteEmail = 'usuario-delete@admin.com';
     const deleteCpf = '74147855632';

@@ -49,7 +49,7 @@ describe('AlteracaoSenha (e2e)', () => {
       data: {
         email: emailNaoAdmin,
         password: await bcrypt.hash(senhaAtual, 10),
-        role: UserRoleEnum.SECRETARIA_CNC,
+        role: UserRoleEnum.SECRETARIA_PAROQUIA,
         active: true,
       },
     });

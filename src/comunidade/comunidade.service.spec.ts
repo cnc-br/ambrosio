@@ -65,7 +65,7 @@ describe('ComunidadeService', () => {
     const caslAbilityService = new CaslAbilityService();
     caslAbilityService.createForUser({
       id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
+      role: UserRoleEnum.SECRETARIA_PAROQUIA,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
 
     const scopedService = new ComunidadeService(
@@ -118,7 +118,7 @@ describe('ComunidadeService', () => {
     const caslAbilityService = new CaslAbilityService();
     caslAbilityService.createForUser({
       id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
+      role: UserRoleEnum.SECRETARIA_PAROQUIA,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
 
     const scopedService = new ComunidadeService(
@@ -163,7 +163,7 @@ describe('ComunidadeService', () => {
     const caslAbilityService = new CaslAbilityService();
     caslAbilityService.createForUser({
       id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
+      role: UserRoleEnum.SECRETARIA_PAROQUIA,
     } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
 
     const scopedService = new ComunidadeService(

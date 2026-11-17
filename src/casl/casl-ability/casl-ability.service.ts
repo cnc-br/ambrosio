@@ -50,11 +50,162 @@ export type DefinePermissions = (
   builder: AbilityBuilder<AppAbility>,
 ) => void;
 
+export type PermissionSubject = Extract<PermissionResource, string>;
+
+export type PermissionRule = {
+  action: PermActions;
+  subject: PermissionSubject;
+  conditions?: PrismaQuery;
+};
+
+export type EscopoSecretaria = {
+  paroquia: PrismaQuery;
+  comunidade: PrismaQuery;
+  etapa: PrismaQuery;
+  pessoaUpdate: PrismaQuery;
+};
+
+type SecretariaUser = { id: string };
+
+/**
+ * Projeção única da condição de paróquia do `SECRETARIA_PAROQUIA`.
+ */
+const paroquiaDoUsuario = (user: SecretariaUser): PrismaQuery => ({
+  usuarioParoquias: { some: { userId: user.id } },
+});
+
+/**
+ * Projeção única da condição de paróquia do `SECRETARIA_CNC`, cujo escopo
+ * alcança todas as paróquias dos setores vinculados a ele.
+ */
+const paroquiaDoSetor = (user: SecretariaUser): PrismaQuery => ({
+  setor: { is: { usuarioSetores: { some: { userId: user.id } } } },
+});
+
+const comunidadeDe = (paroquia: PrismaQuery): PrismaQuery => ({
+  paroquia: { is: paroquia },
+});
+
+const etapaDe = (paroquia: PrismaQuery): PrismaQuery => ({
+  comunidade: { is: comunidadeDe(paroquia) },
+});
+
+/**
+ * Atualização de pessoa permitida quando ela não tem vínculo ativo com
+ * comunidade ou quando ao menos um vínculo ativo está no escopo do usuário.
+ */
+const pessoaUpdateDe = (paroquia: PrismaQuery): PrismaQuery => ({
+  OR: [
+    {
+      comunidadePessoas: { none: { dataSaida: null } },
+    },
+    {
+      comunidadePessoas: {
+        some: {
+          dataSaida: null,
+          comunidade: { is: comunidadeDe(paroquia) },
+        },
+      },
+    },
+  ],
+});
+
+const escopoPorParoquia = (user: SecretariaUser): EscopoSecretaria => {
+  const paroquia = paroquiaDoUsuario(user);
+  return {
+    paroquia,
+    comunidade: comunidadeDe(paroquia),
+    etapa: etapaDe(paroquia),
+    pessoaUpdate: pessoaUpdateDe(paroquia),
+  };
+};
+
+const escopoPorSetor = (user: SecretariaUser): EscopoSecretaria => {
+  const paroquia = paroquiaDoSetor(user);
+  return {
+    paroquia,
+    comunidade: comunidadeDe(paroquia),
+    etapa: etapaDe(paroquia),
+    pessoaUpdate: pessoaUpdateDe(paroquia),
+  };
+};
+
+/**
+ * Base única de capacidades compartilhada pelos perfis de secretaria.
+ * Uma nova capacidade de secretaria entra aqui uma vez e vale para
+ * `SECRETARIA_PAROQUIA` e `SECRETARIA_CNC` no escopo de cada um.
+ */
+const permissoesSecretaria = (
+  escopo: EscopoSecretaria,
+): PermissionRule[] => [
+  { action: 'read', subject: 'pessoa' },
+  { action: 'create', subject: 'pessoa' },
+  {
+    action: 'update',
+    subject: 'pessoa',
+    conditions: escopo.pessoaUpdate,
+  },
+  { action: 'read', subject: 'estadoCivil' },
+  { action: 'read', subject: 'carisma' },
+  { action: 'read', subject: 'diocese' },
+  { action: 'read', subject: 'localidade' },
+  { action: 'read', subject: 'paroquia', conditions: escopo.paroquia },
+  {
+    action: 'read',
+    subject: 'comunidade',
+    conditions: escopo.comunidade,
+  },
+  {
+    action: 'create',
+    subject: 'comunidade',
+    conditions: escopo.comunidade,
+  },
+  {
+    action: 'update',
+    subject: 'comunidade',
+    conditions: escopo.comunidade,
+  },
+  { action: 'create', subject: 'etapa', conditions: escopo.etapa },
+  { action: 'update', subject: 'etapa', conditions: escopo.etapa },
+];
+
+const aplicarPermissoes = (
+  builder: AbilityBuilder<AppAbility>,
+  regras: PermissionRule[],
+) => {
+  for (const { action, subject, conditions } of regras) {
+    if (conditions) {
+      builder.can(action, subject, conditions);
+    } else {
+      builder.can(action, subject);
+    }
+  }
+};
+
 // TODO: renomear essa funcao para algo comum que todos podem acessar
 const grantReadPessoaDiocese: DefinePermissions = (user, { can }) => {
   can('read', 'pessoa');
   can('read', 'diocese');
   can('read', 'estadoCivil');
+};
+
+const secretariaPorParoquia: DefinePermissions = (user, builder) => {
+  aplicarPermissoes(builder, permissoesSecretaria(escopoPorParoquia(user)));
+};
+
+const secretariaPorSetor: DefinePermissions = (user, builder) => {
+  const escopo = escopoPorSetor(user);
+  aplicarPermissoes(builder, permissoesSecretaria(escopo));
+  // Capacidades exclusivas do SECRETARIA_CNC: gestão de paróquias dentro do
+  // próprio setor e CRUD irrestrito de diocese (a leitura já vem da base).
+  aplicarPermissoes(builder, [
+    { action: 'create', subject: 'diocese' },
+    { action: 'update', subject: 'diocese' },
+    { action: 'delete', subject: 'diocese' },
+    { action: 'create', subject: 'paroquia' },
+    { action: 'update', subject: 'paroquia', conditions: escopo.paroquia },
+    { action: 'delete', subject: 'paroquia', conditions: escopo.paroquia },
+  ]);
 };
 
 const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
@@ -75,56 +226,8 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
   CATEQUISTA_SETOR: grantReadPessoaDiocese,
   CATEQUISTA_REGIAO: grantReadPessoaDiocese,
   CATEQUISTA_PAROQUIA: grantReadPessoaDiocese,
-  SECRETARIA_PAROQUIA: grantReadPessoaDiocese,
-  SECRETARIA_CNC(user, { can }) {
-    can('read', 'pessoa');
-    can('create', 'pessoa');
-    can('update', 'pessoa', {
-      OR: [
-        {
-          comunidadePessoas: { none: { dataSaida: null } },
-        },
-        {
-          comunidadePessoas: {
-            some: {
-              dataSaida: null,
-              comunidade: {
-                is: {
-                  paroquia: {
-                    is: {
-                      usuarioParoquias: { some: { userId: user.id } },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      ],
-    });
-    can('read', 'estadoCivil');
-    can('read', 'carisma');
-    can('read', 'diocese');
-    can('read', 'localidade');
-    can('read', 'paroquia', {
-      usuarioParoquias: { some: { userId: user.id } }
-    });
-    can('read', 'comunidade', {
-      paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } },
-    });
-    can('create', 'comunidade', {
-      paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } },
-    });
-    can('update', 'comunidade', {
-      paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } },
-    });
-    can('create', 'etapa', {
-      comunidade: { is: { paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } } } },
-    });
-    can('update', 'etapa', {
-      comunidade: { is: { paroquia: { is: { usuarioParoquias: { some: { userId: user.id } } } } } },
-    });
-  },
+  SECRETARIA_PAROQUIA: secretariaPorParoquia,
+  SECRETARIA_CNC: secretariaPorSetor,
 };
 
 @Injectable({ scope: Scope.REQUEST })

@@ -117,8 +117,8 @@ describe('CasalService', () => {
   describe('createCasal', () => {
     const createCasalDto = { pessoaId: 1, conjugueId: 2 };
 
-    it('SECRETARIA_CNC cria casal com as duas pessoas no escopo', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+    it('SECRETARIA_PAROQUIA cria casal com as duas pessoas no escopo', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
       pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockResolvedValue(
         pessoa,
       );
@@ -139,8 +139,8 @@ describe('CasalService', () => {
       expect(pessoaCasalRepositoryMock.create).toHaveBeenCalled();
     });
 
-    it('SECRETARIA_CNC cria casal com uma pessoa fora do escopo', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+    it('SECRETARIA_PAROQUIA cria casal com uma pessoa fora do escopo', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
       pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockImplementation(
         (id: number) =>
           id === 1
@@ -156,8 +156,8 @@ describe('CasalService', () => {
       expect(pessoaRepositoryMock.findUniqueOrThrowPorId).not.toHaveBeenCalled();
     });
 
-    it('SECRETARIA_CNC cria casal com as duas pessoas fora do escopo', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+    it('SECRETARIA_PAROQUIA cria casal com as duas pessoas fora do escopo', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
       pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockRejectedValue(
         new ForbiddenException('Fora do escopo'),
       );
@@ -170,8 +170,8 @@ describe('CasalService', () => {
       expect(pessoaRepositoryMock.findUniqueOrThrowPorId).not.toHaveBeenCalled();
     });
 
-    it('SECRETARIA_CNC cria casal com uma pessoa sem vínculo ativo', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+    it('SECRETARIA_PAROQUIA cria casal com uma pessoa sem vínculo ativo', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
       pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockResolvedValue(
         pessoa,
       );
@@ -195,7 +195,7 @@ describe('CasalService', () => {
     });
 
     it('pessoa inexistente no casal propaga 404', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
       const notFoundError = Object.assign(
         new Error("O registro de 'Pessoa' não foi encontrado."),
         { code: 'P2025' },
@@ -245,8 +245,8 @@ describe('CasalService', () => {
       pessoaRepositoryMock.findManyElegiveisCasal.mockResolvedValue([]);
     });
 
-    it('SECRETARIA_CNC filtra cônjuges pelas paróquias do usuário', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-secretaria');
+    it('SECRETARIA_PAROQUIA filtra cônjuges pelas paróquias do usuário', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
       const pessoaElegivel = {
         id: 1,
         externalId: 'uuid-pessoa',
@@ -267,9 +267,13 @@ describe('CasalService', () => {
                       is: {
                         paroquia: {
                           is: {
-                            usuarioParoquias: {
-                              some: { userId: 'usuario-secretaria' },
-                            },
+                            OR: [
+                              {
+                                usuarioParoquias: {
+                                  some: { userId: 'usuario-secretaria' },
+                                },
+                              },
+                            ],
                           },
                         },
                       },
@@ -289,8 +293,8 @@ describe('CasalService', () => {
       );
     });
 
-    it('SECRETARIA_CNC sem paróquias retorna lista vazia', async () => {
-      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-sem-paroquia');
+    it('SECRETARIA_PAROQUIA sem paróquias retorna lista vazia', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-sem-paroquia');
 
       const result = await service.findAllBySexoEstadoCivilCasado('M');
 
@@ -306,9 +310,13 @@ describe('CasalService', () => {
                       is: expect.objectContaining({
                         paroquia: expect.objectContaining({
                           is: expect.objectContaining({
-                            usuarioParoquias: expect.objectContaining({
-                              some: { userId: 'usuario-sem-paroquia' },
-                            }),
+                            OR: expect.arrayContaining([
+                              expect.objectContaining({
+                                usuarioParoquias: expect.objectContaining({
+                                  some: { userId: 'usuario-sem-paroquia' },
+                                }),
+                              }),
+                            ]),
                           }),
                         }),
                       }),
@@ -323,13 +331,61 @@ describe('CasalService', () => {
       expect(result).toEqual([]);
     });
 
+    it('SECRETARIA_CNC filtra cônjuges pelos setores do usuário', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-cnc');
+
+      await service.findAllBySexoEstadoCivilCasado('M');
+
+      expect(pessoaRepositoryMock.findManyElegiveisCasal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              {
+                comunidadePessoas: {
+                  some: {
+                    dataSaida: null,
+                    comunidade: {
+                      is: {
+                        paroquia: {
+                          is: {
+                            OR: [
+                              {
+                                setor: {
+                                  is: {
+                                    usuarioSetores: {
+                                      some: { userId: 'usuario-cnc' },
+                                    },
+                                  },
+                                },
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            ]),
+          }),
+        }),
+      );
+    });
+
     it('ADMIN lista todos os cônjuges sem filtro de paróquia', async () => {
       setAbility(UserRoleEnum.ADMIN, 'usuario-admin');
 
       const result = await service.findAllBySexoEstadoCivilCasado('M');
 
       const where = pessoaRepositoryMock.findManyElegiveisCasal.mock.calls[0][0].where;
-      expect(where.AND[2]).toEqual({});
+      expect(where.AND[2]).toEqual({
+        comunidadePessoas: {
+          some: {
+            dataSaida: null,
+            comunidade: { is: { paroquia: { is: {} } } },
+          },
+        },
+      });
       expect(result).toEqual([]);
     });
 

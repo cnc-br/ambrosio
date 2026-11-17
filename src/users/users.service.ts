@@ -161,6 +161,36 @@ export class UsersService extends BaseService {
     });
   }
 
+  async adicionarSetoresAoUsuario(userId: string, setorIds: number[]) {
+    this.validateUpdateAbility('user');
+    return await this.prismaService.$transaction(async (tx) => {
+      await tx.user.findUniqueOrThrow({ where: { id: userId } });
+
+      if (setorIds.length > 0) {
+        const setores = await tx.setor.findMany({
+          where: { id: { in: setorIds } },
+          select: { id: true },
+        });
+
+        if (setores.length !== setorIds.length) {
+          const encontrados = setores.map((setor) => setor.id);
+          const inexistentes = setorIds.filter(
+            (setorId) => !encontrados.includes(setorId),
+          );
+          throw new NotFoundException(
+            `O registro de 'Setor' não foi encontrado: ${inexistentes.join(', ')}.`,
+          );
+        }
+      }
+
+      await tx.usuarioSetor.deleteMany({ where: { userId } });
+
+      return await tx.usuarioSetor.createMany({
+        data: setorIds.map((setorId) => ({ userId, setorId })),
+      });
+    });
+  }
+
   async remove(id: string) {
     this.validateDeleteAbility('user');
     await this.prismaService.user.delete({

@@ -3,6 +3,33 @@ import { accessibleBy } from '@casl/prisma';
 import { UserRoleEnum } from 'neocatecumenal';
 import { CaslAbilityService } from './casl-ability.service.js';
 
+type AppUser = Parameters<CaslAbilityService['createForUser']>[0];
+
+const usuario = (id: string, role: UserRoleEnum) =>
+  ({ id, role }) as unknown as AppUser;
+
+const escopoComunidade = (paroquia: object) => ({
+  OR: [{ paroquia: { is: paroquia } }],
+});
+
+const escopoPessoaUpdate = (paroquia: object) => ({
+  OR: [
+    {
+      OR: [
+        { comunidadePessoas: { none: { dataSaida: null } } },
+        {
+          comunidadePessoas: {
+            some: {
+              dataSaida: null,
+              comunidade: { is: { paroquia: { is: paroquia } } },
+            },
+          },
+        },
+      ],
+    },
+  ],
+});
+
 describe('CaslAbilityService', () => {
   let service: CaslAbilityService;
 
@@ -18,190 +45,183 @@ describe('CaslAbilityService', () => {
     expect(service).toBeDefined();
   });
 
-  it('restringe a leitura de comunidades do SECRETARIA_CNC às paróquias do usuário', () => {
-    const user = {
-      id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
-
-    const where = accessibleBy(service.ability, 'read').comunidade;
-
-    expect(where).toEqual({
-      OR: [
-        {
-          paroquia: {
-            is: {
-              usuarioParoquias: { some: { userId: 'usuario-secretaria' } },
-            },
-          },
-        },
-      ],
-    });
-  });
-
-  it('restringe o cadastro e a atualização de comunidades do SECRETARIA_CNC às paróquias do usuário', () => {
-    const user = {
-      id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
-
-    const condicaoEsperada = {
-      OR: [
-        {
-          paroquia: {
-            is: {
-              usuarioParoquias: { some: { userId: 'usuario-secretaria' } },
-            },
-          },
-        },
-      ],
+  describe('SECRETARIA_PAROQUIA', () => {
+    const paroquiaDoUsuario = {
+      usuarioParoquias: { some: { userId: 'usuario-secretaria' } },
     };
 
-    expect(accessibleBy(service.ability, 'create').comunidade).toEqual(
-      condicaoEsperada,
-    );
-    expect(accessibleBy(service.ability, 'update').comunidade).toEqual(
-      condicaoEsperada,
-    );
-  });
-
-  it('permite que o SECRETARIA_CNC crie e atualize pessoa e mantenha a leitura', () => {
-    const user = {
-      id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
-
-    expect(service.ability.can('create', 'pessoa')).toBe(true);
-    expect(service.ability.can('update', 'pessoa')).toBe(true);
-    expect(service.ability.can('read', 'pessoa')).toBe(true);
-  });
-
-  it('restringe a atualização de pessoa do SECRETARIA_CNC às paróquias do usuário', () => {
-    const user = {
-      id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
-
-    expect(accessibleBy(service.ability, 'update').pessoa).toEqual({
-      OR: [
-        {
-          OR: [
-            {
-              comunidadePessoas: { none: { dataSaida: null } },
-            },
-            {
-              comunidadePessoas: {
-                some: {
-                  dataSaida: null,
-                  comunidade: {
-                    is: {
-                      paroquia: {
-                        is: {
-                          usuarioParoquias: {
-                            some: { userId: 'usuario-secretaria' },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          ],
-        },
-      ],
+    beforeEach(() => {
+      service.createForUser(
+        usuario('usuario-secretaria', UserRoleEnum.SECRETARIA_PAROQUIA),
+      );
     });
-    expect(accessibleBy(service.ability, 'read').pessoa).toEqual({});
-    expect(accessibleBy(service.ability, 'create').pessoa).toEqual({});
+
+    it('restringe a leitura e a escrita de comunidades às paróquias do usuário', () => {
+      const condicaoEsperada = escopoComunidade(paroquiaDoUsuario);
+
+      expect(accessibleBy(service.ability, 'read').comunidade).toEqual(
+        condicaoEsperada,
+      );
+      expect(accessibleBy(service.ability, 'create').comunidade).toEqual(
+        condicaoEsperada,
+      );
+      expect(accessibleBy(service.ability, 'update').comunidade).toEqual(
+        condicaoEsperada,
+      );
+    });
+
+    it('restringe a leitura de paróquias às paróquias do usuário', () => {
+      expect(accessibleBy(service.ability, 'read').paroquia).toEqual({
+        OR: [paroquiaDoUsuario],
+      });
+    });
+
+    it('restringe a atualização de pessoa às paróquias do usuário', () => {
+      expect(accessibleBy(service.ability, 'update').pessoa).toEqual(
+        escopoPessoaUpdate(paroquiaDoUsuario),
+      );
+      expect(accessibleBy(service.ability, 'read').pessoa).toEqual({});
+      expect(accessibleBy(service.ability, 'create').pessoa).toEqual({});
+    });
+
+    it('possui a base compartilhada de secretaria', () => {
+      expect(service.ability.can('create', 'pessoa')).toBe(true);
+      expect(service.ability.can('read', 'carisma')).toBe(true);
+      expect(service.ability.can('read', 'localidade')).toBe(true);
+      expect(service.ability.can('create', 'etapa')).toBe(true);
+    });
+
+    it('não gerencia paróquias', () => {
+      expect(service.ability.can('create', 'paroquia')).toBe(false);
+      expect(service.ability.can('update', 'paroquia')).toBe(false);
+      expect(service.ability.can('delete', 'paroquia')).toBe(false);
+    });
+
+    it('não gerencia diocese', () => {
+      expect(service.ability.can('read', 'diocese')).toBe(true);
+      expect(service.ability.can('create', 'diocese')).toBe(false);
+      expect(service.ability.can('update', 'diocese')).toBe(false);
+      expect(service.ability.can('delete', 'diocese')).toBe(false);
+    });
+  });
+
+  describe('SECRETARIA_CNC', () => {
+    const paroquiaDoSetor = {
+      setor: {
+        is: { usuarioSetores: { some: { userId: 'usuario-secretaria-cnc' } } },
+      },
+    };
+
+    beforeEach(() => {
+      service.createForUser(
+        usuario('usuario-secretaria-cnc', UserRoleEnum.SECRETARIA_CNC),
+      );
+    });
+
+    it('restringe a leitura e a escrita de comunidades aos setores do usuário', () => {
+      const condicaoEsperada = escopoComunidade(paroquiaDoSetor);
+
+      expect(accessibleBy(service.ability, 'read').comunidade).toEqual(
+        condicaoEsperada,
+      );
+      expect(accessibleBy(service.ability, 'create').comunidade).toEqual(
+        condicaoEsperada,
+      );
+      expect(accessibleBy(service.ability, 'update').comunidade).toEqual(
+        condicaoEsperada,
+      );
+    });
+
+    it('restringe a atualização de pessoa aos setores do usuário', () => {
+      expect(accessibleBy(service.ability, 'update').pessoa).toEqual(
+        escopoPessoaUpdate(paroquiaDoSetor),
+      );
+      expect(accessibleBy(service.ability, 'read').pessoa).toEqual({});
+      expect(accessibleBy(service.ability, 'create').pessoa).toEqual({});
+    });
+
+    it('possui a base compartilhada de secretaria', () => {
+      expect(service.ability.can('create', 'pessoa')).toBe(true);
+      expect(service.ability.can('read', 'carisma')).toBe(true);
+      expect(service.ability.can('read', 'localidade')).toBe(true);
+      expect(service.ability.can('create', 'etapa')).toBe(true);
+    });
+
+    it('gerencia paróquias somente dentro dos setores do usuário', () => {
+      expect(service.ability.can('create', 'paroquia')).toBe(true);
+      expect(accessibleBy(service.ability, 'update').paroquia).toEqual({
+        OR: [paroquiaDoSetor],
+      });
+      expect(accessibleBy(service.ability, 'delete').paroquia).toEqual({
+        OR: [paroquiaDoSetor],
+      });
+    });
+
+    it('restringe a leitura de paróquias aos setores do usuário', () => {
+      expect(accessibleBy(service.ability, 'read').paroquia).toEqual({
+        OR: [paroquiaDoSetor],
+      });
+    });
+
+    it('gerencia diocese (CRUD)', () => {
+      expect(service.ability.can('read', 'diocese')).toBe(true);
+      expect(service.ability.can('create', 'diocese')).toBe(true);
+      expect(service.ability.can('update', 'diocese')).toBe(true);
+      expect(service.ability.can('delete', 'diocese')).toBe(true);
+    });
   });
 
   it('não restringe a atualização de pessoa do ADMIN', () => {
-    const user = {
-      id: 'usuario-admin',
-      role: UserRoleEnum.ADMIN,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
+    service.createForUser(usuario('usuario-admin', UserRoleEnum.ADMIN));
 
     expect(accessibleBy(service.ability, 'update').pessoa).toEqual({});
   });
 
   it('não permite que o NAO_IDENTIFICADO crie ou atualize pessoa', () => {
-    const user = {
-      id: 'usuario-nao-identificado',
-      role: UserRoleEnum.NAO_IDENTIFICADO,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
+    service.createForUser(
+      usuario('usuario-nao-identificado', UserRoleEnum.NAO_IDENTIFICADO),
+    );
 
     expect(service.ability.can('create', 'pessoa')).toBe(false);
     expect(service.ability.can('update', 'pessoa')).toBe(false);
   });
 
   it('não restringe a leitura de comunidades do ADMIN', () => {
-    const user = {
-      id: 'usuario-admin',
-      role: UserRoleEnum.ADMIN,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
+    service.createForUser(usuario('usuario-admin', UserRoleEnum.ADMIN));
 
     expect(accessibleBy(service.ability, 'read').comunidade).toEqual({});
   });
 
   it('não restringe o cadastro e a atualização de comunidades do ADMIN', () => {
-    const user = {
-      id: 'usuario-admin',
-      role: UserRoleEnum.ADMIN,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
+    service.createForUser(usuario('usuario-admin', UserRoleEnum.ADMIN));
 
     expect(accessibleBy(service.ability, 'create').comunidade).toEqual({});
     expect(accessibleBy(service.ability, 'update').comunidade).toEqual({});
   });
 
   it('permite ao ADMIN ler e excluir o histórico de execuções de manutenção', () => {
-    const user = {
-      id: 'usuario-admin',
-      role: UserRoleEnum.ADMIN,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-    service.createForUser(user);
+    service.createForUser(usuario('usuario-admin', UserRoleEnum.ADMIN));
 
     expect(service.ability.can('read', 'scheduledJobExecution')).toBe(true);
     expect(service.ability.can('delete', 'scheduledJobExecution')).toBe(true);
   });
 
-  it('nega ao SECRETARIA_CNC o acesso ao histórico de execuções de manutenção', () => {
-    const user = {
-      id: 'usuario-secretaria',
-      role: UserRoleEnum.SECRETARIA_CNC,
-    } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+  it.each([UserRoleEnum.SECRETARIA_PAROQUIA, UserRoleEnum.SECRETARIA_CNC])(
+    'nega ao %s o acesso ao histórico de execuções de manutenção',
+    (role) => {
+      service.createForUser(usuario(`usuario-${role}`, role));
 
-    service.createForUser(user);
-
-    expect(service.ability.can('read', 'scheduledJobExecution')).toBe(false);
-    expect(service.ability.can('delete', 'scheduledJobExecution')).toBe(false);
-  });
+      expect(service.ability.can('read', 'scheduledJobExecution')).toBe(false);
+      expect(service.ability.can('delete', 'scheduledJobExecution')).toBe(
+        false,
+      );
+    },
+  );
 
   it.each(Object.values(UserRoleEnum))(
     'permite que o perfil %s troque a própria senha',
     (role) => {
-      const user = {
-        id: `usuario-${role}`,
-        role,
-      } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-      service.createForUser(user);
+      service.createForUser(usuario(`usuario-${role}`, role));
 
       expect(service.ability.can('changePassword', 'user')).toBe(true);
     },
@@ -212,15 +232,9 @@ describe('CaslAbilityService', () => {
   )(
     'não concede update user ao perfil %s por causa da troca de senha',
     (role) => {
-      const user = {
-        id: `usuario-${role}`,
-        role,
-      } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
-
-      service.createForUser(user);
+      service.createForUser(usuario(`usuario-${role}`, role));
 
       expect(service.ability.can('update', 'user')).toBe(false);
     },
   );
 });
-

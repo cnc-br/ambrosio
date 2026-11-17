@@ -246,6 +246,7 @@ model user {
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
   usuarioParoquias     usuarioParoquia[]
+  usuarioSetores       usuarioSetor[]
 }
 
 model usuarioParoquia {
@@ -259,14 +260,25 @@ model usuarioParoquia {
 }
 
 model setor {
-  id        Int        @id @default(autoincrement())
-  descricao String     @unique @db.VarChar(50)
-  ativo     Boolean    @default(true)
-  regiaoId  Int
-  paroquia  paroquia[]
-  regiao    regiao     @relation(fields: [regiaoId], references: [id])
+  id              Int            @id @default(autoincrement())
+  descricao       String         @unique @db.VarChar(50)
+  ativo           Boolean        @default(true)
+  regiaoId        Int
+  paroquia        paroquia[]
+  usuarioSetores  usuarioSetor[]
+  regiao          regiao         @relation(fields: [regiaoId], references: [id])
 
   @@unique([descricao, regiaoId])
+}
+
+model usuarioSetor {
+  id      Int    @id @default(autoincrement())
+  userId  String
+  setorId Int
+  user    user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  setor   setor  @relation(fields: [setorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setorId])
 }
 
 model macroRegiao {

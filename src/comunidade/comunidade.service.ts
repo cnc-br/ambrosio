@@ -31,17 +31,16 @@ export class ComunidadeService extends BaseService {
   async create(createComunidadeDto: CreateComunidadeDto) {
     this.validateCreateAbility('comunidade');
 
-    const createScope = accessibleBy(
+    // Projeção única do escopo de paróquia do perfil (paróquias do usuário ou
+    // paróquias dos setores vinculados), consumida também pelos demais serviços.
+    const paroquiaScope = accessibleBy(
       this.abilityService.ability,
-      'create',
-    ).comunidade;
+      'read',
+    ).paroquia;
 
     const paroquia = await this.prisma.paroquia.findFirst({
       where: {
-        AND: [
-          { id: createComunidadeDto.paroquiaId },
-          this.condicaoEscopoDeParoquia(createScope),
-        ],
+        AND: [{ id: createComunidadeDto.paroquiaId }, paroquiaScope],
       },
     });
 
@@ -347,25 +346,4 @@ export class ComunidadeService extends BaseService {
     return pessoaNoEscopo;
   }
 
-  /**
-   * Projeta a condição de escopo de `comunidade` (relação to-one `comunidade.paroquia`)
-   * para o modelo `paroquia`, para validar a paróquia alvo no cadastro.
-   * `@casl/prisma` agrupa a regra condicional em um array `OR`; perfis sem condição
-   * (ex.: ADMIN) resultam em `{}`.
-   */
-
-  private condicaoEscopoDeParoquia(
-    scopeComunidade: Prisma.comunidadeWhereInput,
-  ): Prisma.paroquiaWhereInput {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const condicao: any = Array.isArray(scopeComunidade.OR)
-      ? scopeComunidade.OR[0]
-      : scopeComunidade;
-
-
-    const vinculos = condicao?.paroquia?.is
-      ?.usuarioParoquias as Prisma.UsuarioParoquiaListRelationFilter;
-
-    return vinculos ? { usuarioParoquias: vinculos } : {};
-  }
 }

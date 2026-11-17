@@ -71,13 +71,24 @@ async function main() {
       },
     });
 
-    const secretariaCnc = await prisma.user.create({
+    const secretariaParoquia = await prisma.user.create({
       data: {
         email: 'secretaria@admin.com',
         password:
           '$2b$10$.TT7jgY.IqTW/3qg9RXw4.y20H4ROVqfj0TIjBi5l9ks2fb5ueQsC',
-        role: 'SECRETARIA_CNC',
+        role: 'SECRETARIA_PAROQUIA',
         whatsapp: '16999239999',
+        active: true,
+      },
+    });
+
+    const secretariaCnc = await prisma.user.create({
+      data: {
+        email: 'secretaria-cnc@admin.com',
+        password:
+          '$2b$10$.TT7jgY.IqTW/3qg9RXw4.y20H4ROVqfj0TIjBi5l9ks2fb5ueQsC',
+        role: 'SECRETARIA_CNC',
+        whatsapp: '16999339999',
         active: true,
       },
     });
@@ -88,8 +99,15 @@ async function main() {
 
     await prisma.usuarioParoquia.create({
       data: {
-        userId: secretariaCnc.id,
+        userId: secretariaParoquia.id,
         paroquiaId: primeiraParoquia.id,
+      },
+    });
+
+    await prisma.usuarioSetor.create({
+      data: {
+        userId: secretariaCnc.id,
+        setorId: primeiraParoquia.setorId,
       },
     });
 

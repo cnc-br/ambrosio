@@ -2,20 +2,31 @@ import { INestApplication } from '@nestjs/common';
 import { setupTestModule } from './test-setup.js';
 import request from 'supertest';
 import { faker } from '@faker-js/faker/locale/pt_BR';
+import { PrismaService } from 'src/prisma.service.js';
 
 describe('ParoquiaController (e2e)', () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   const principal = 'paroquia';
   let token = '';
+  let tokenSecretariaCnc = '';
+  let tokenSecretariaParoquia = '';
+
+  const login = async (email: string) => {
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password: 'admin' });
+
+    return response.body.data.access_token;
+  };
 
   beforeAll(async () => {
     app = await setupTestModule();
+    prisma = app.get(PrismaService);
 
-    const response = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: 'admin@admin.com', password: 'admin' });
-
-    token = response.body.data.access_token;
+    token = await login('admin@admin.com');
+    tokenSecretariaCnc = await login('secretaria-cnc@admin.com');
+    tokenSecretariaParoquia = await login('secretaria@admin.com');
   });
 
   afterAll(async () => {
@@ -632,5 +643,219 @@ describe('ParoquiaController (e2e)', () => {
       .get(`/endereco/${enderecoId}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(404);
+  });
+
+  describe('gestão de paróquias pelo SECRETARIA_CNC', () => {
+    const payloadCreate = (setorId: number, descricao: string) => ({
+      descricao,
+      diocese: { id: 1 },
+      setor: { id: setorId },
+      endereco: {
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    });
+
+    const criarParoquiaDireto = async (setorId: number) => {
+      const cidade = await prisma.cidade.findFirstOrThrow({
+        where: { nome: 'Franca' },
+      });
+      const endereco = await prisma.endereco.create({
+        data: {
+          cep: '14400000',
+          logradouro: 'Rua de Teste',
+          numero: '10',
+          bairro: 'Centro',
+          cidadeId: cidade.id,
+        },
+      });
+
+      return prisma.paroquia.create({
+        data: {
+          descricao: `Teste setor ${setorId} ${Date.now()}`.slice(0, 50),
+          dioceseId: 1,
+          enderecoId: endereco.id,
+          setorId,
+        },
+      });
+    };
+
+    const payloadUpdate = async (paroquiaId: number) => {
+      const paroquia = await prisma.paroquia.findUniqueOrThrow({
+        where: { id: paroquiaId },
+        include: { endereco: true },
+      });
+
+      return {
+        descricao: `Atualizada ${Date.now()}`.slice(0, 50),
+        diocese: { id: paroquia.dioceseId },
+        endereco: {
+          id: paroquia.enderecoId,
+          cep: paroquia.endereco.cep,
+          logradouro: paroquia.endereco.logradouro,
+          numero: paroquia.endereco.numero,
+          bairro: paroquia.endereco.bairro,
+          cidade: 'Franca',
+          UF: 'SP',
+        },
+      };
+    };
+
+    it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra paróquia no próprio setor`, async () => {
+      const descricao = `CNC própria ${Date.now()}`.slice(0, 50);
+
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send(payloadCreate(1, descricao))
+        .expect(201);
+
+      expect(response.body.data.descricao).toBe(descricao);
+      expect(response.body.data.setor.id).toBe(1);
+    });
+
+    it(`/${principal} (POST) - 403 | SECRETARIA_CNC não cadastra paróquia em setor alheio`, async () => {
+      await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send(payloadCreate(2, `CNC alheia ${Date.now()}`.slice(0, 50)))
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.error).toBe('Forbidden');
+          expect(res.body.statusCode).toBe(403);
+        });
+    });
+
+    it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC atualiza paróquia do próprio setor`, async () => {
+      const paroquia = await criarParoquiaDireto(1);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/${principal}/${paroquia.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send(await payloadUpdate(paroquia.id))
+        .expect(200);
+
+      expect(response.body.data.id).toBe(paroquia.id);
+    });
+
+    it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC não atualiza paróquia de setor alheio`, async () => {
+      const paroquia = await criarParoquiaDireto(2);
+
+      await request(app.getHttpServer())
+        .patch(`/${principal}/${paroquia.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send(await payloadUpdate(paroquia.id))
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.error).toBe('Forbidden');
+          expect(res.body.statusCode).toBe(403);
+        });
+    });
+
+    it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC não move paróquia para setor alheio`, async () => {
+      const paroquia = await criarParoquiaDireto(1);
+
+      await request(app.getHttpServer())
+        .patch(`/${principal}/${paroquia.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send({
+          ...(await payloadUpdate(paroquia.id)),
+          setor: { id: 2 },
+        })
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.error).toBe('Forbidden');
+          expect(res.body.statusCode).toBe(403);
+        });
+    });
+
+    it(`/${principal}/:id (DELETE) - 200 | SECRETARIA_CNC exclui paróquia do próprio setor`, async () => {
+      const paroquia = await criarParoquiaDireto(1);
+
+      await request(app.getHttpServer())
+        .delete(`/${principal}/${paroquia.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .expect(200);
+    });
+
+    it(`/${principal}/:id (DELETE) - 403 | SECRETARIA_CNC não exclui paróquia de setor alheio`, async () => {
+      const paroquia = await criarParoquiaDireto(2);
+
+      await request(app.getHttpServer())
+        .delete(`/${principal}/${paroquia.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.error).toBe('Forbidden');
+          expect(res.body.statusCode).toBe(403);
+        });
+    });
+
+    it(`/${principal}/:id (PATCH|DELETE) - 404 | SECRETARIA_CNC recebe 404 para paróquia inexistente`, async () => {
+      const response = await request(app.getHttpServer())
+        .patch(`/${principal}/987654`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send({
+          descricao: 'Inexistente',
+          diocese: { id: 1 },
+          endereco: {
+            id: 1,
+            cep: '14400660',
+            logradouro: 'Rua do comércio',
+            numero: '789',
+            bairro: 'Centro',
+            cidade: 'Franca',
+            UF: 'SP',
+          },
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe(
+        `O registro de 'Paroquia' não foi encontrado.`,
+      );
+
+      await request(app.getHttpServer())
+        .delete(`/${principal}/987654`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .expect(404);
+    });
+
+    it(`/${principal} (POST|PATCH|DELETE) - 403 | SECRETARIA_PAROQUIA não gerencia paróquias`, async () => {
+      await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${tokenSecretariaParoquia}`)
+        .send(payloadCreate(1, `Paroquia local ${Date.now()}`.slice(0, 50)))
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.message).toBe(
+            'Você não tem permissão para create paroquia',
+          );
+        });
+
+      await request(app.getHttpServer())
+        .patch(`/${principal}/1`)
+        .set('Authorization', `Bearer ${tokenSecretariaParoquia}`)
+        .send(await payloadUpdate(1))
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.message).toBe(
+            'Você não tem permissão para update paroquia',
+          );
+        });
+
+      await request(app.getHttpServer())
+        .delete(`/${principal}/1`)
+        .set('Authorization', `Bearer ${tokenSecretariaParoquia}`)
+        .expect(403)
+        .expect((res) => {
+          expect(res.body.message).toBe(
+            'Você não tem permissão para delete paroquia',
+          );
+        });
+    });
   });
 });

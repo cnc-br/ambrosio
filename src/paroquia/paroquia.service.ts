@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -35,6 +36,7 @@ export class ParoquiaService extends BaseService {
     this.validateCreateAbility('paroquia');
     await this.dioceseService.findOne(createParoquiaDto.diocese.id);
     await this.setorService.findOne(createParoquiaDto.setor.id);
+    await this.validarSetorNoEscopoDoUsuario(createParoquiaDto.setor.id);
 
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
@@ -97,6 +99,7 @@ export class ParoquiaService extends BaseService {
     updateParoquiaDto: UpdateParoquiaDto,
   ): Promise<Paroquia> {
     this.validateUpdateAbility('paroquia');
+    await this.validarParoquiaNoEscopoDoUsuario(id);
     const paroquia = await this.findOne(id);
     if (!paroquia) {
       throw new NotFoundException('Paroquia não encontrada');
@@ -107,6 +110,11 @@ export class ParoquiaService extends BaseService {
     );
     if (!diocese) {
       throw new NotFoundException('Diocese não encontrada');
+    }
+
+    if (updateParoquiaDto.setor) {
+      await this.setorService.findOne(updateParoquiaDto.setor.id);
+      await this.validarSetorNoEscopoDoUsuario(updateParoquiaDto.setor.id);
     }
 
     this.validarEnderecoPertenceParoquia(
@@ -150,6 +158,7 @@ export class ParoquiaService extends BaseService {
 
   async remove(id: number) {
     this.validateDeleteAbility('paroquia');
+    await this.validarParoquiaNoEscopoDoUsuario(id);
 
     const result = await this.prisma.$transaction(async (transaction) => {
       const paroquia = await transaction.paroquia.delete({
@@ -166,6 +175,44 @@ export class ParoquiaService extends BaseService {
 
     this.logger.log(`Paroquia id ${id} removida com sucesso`);
     return serializeParoquia(result);
+  }
+
+  /**
+   * `validateCreateAbility`/`validateDeleteAbility` só avaliam ação + recurso,
+   * sem aplicar a condição CASL a um objeto. Por isso o escopo de escrita de
+   * paróquia é validado explicitamente no serviço.
+   */
+  private async validarParoquiaNoEscopoDoUsuario(id: number) {
+    const paroquiaNoEscopo = await this.prisma.paroquia.findFirst({
+      where: { AND: [{ id }, this.asPermissions()] },
+      select: { id: true },
+    });
+
+    if (paroquiaNoEscopo) {
+      return;
+    }
+
+    // Distingue 404 (inexistente) de 403 (existente fora do escopo).
+    await this.prisma.paroquia.findUniqueOrThrow({ where: { id } });
+    throw new ForbiddenException(
+      'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+    );
+  }
+
+  private async validarSetorNoEscopoDoUsuario(setorId: number) {
+    if (this.abilityService.ability.can('manage', 'all')) {
+      return;
+    }
+
+    const vinculo = await this.prisma.usuarioSetor.findFirst({
+      where: { userId: this.abilityService.userId, setorId },
+    });
+
+    if (!vinculo) {
+      throw new ForbiddenException(
+        'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+      );
+    }
   }
 
   private validarEnderecoPertenceParoquia(

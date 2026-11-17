@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { setupTestModule } from '../test-setup.js';
@@ -88,11 +88,11 @@ describe('CarismaScope (e2e)', () => {
 
     const secretaria2 = await prisma.user.upsert({
       where: { email: 'secretaria2@admin.com' },
-      update: { role: 'SECRETARIA_CNC', active: true },
+      update: { role: 'SECRETARIA_PAROQUIA', active: true },
       create: {
         email: 'secretaria2@admin.com',
         password: ADMIN_PASSWORD_HASH,
-        role: 'SECRETARIA_CNC',
+        role: 'SECRETARIA_PAROQUIA',
         active: true,
       },
     });
@@ -143,7 +143,7 @@ describe('CarismaScope (e2e)', () => {
     await app.close();
   });
 
-  it('SECRETARIA_CNC da paróquia 1 adiciona carismas a pessoa da própria paróquia', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 1 adiciona carismas a pessoa da própria paróquia', async () => {
     const response = await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaPropria.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -153,7 +153,7 @@ describe('CarismaScope (e2e)', () => {
     expect(response.body.data.adicionados).toBe(1);
   });
 
-  it('SECRETARIA_CNC da paróquia 1 não adiciona carismas a pessoa de outra paróquia', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 1 não adiciona carismas a pessoa de outra paróquia', async () => {
     const response = await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -164,7 +164,7 @@ describe('CarismaScope (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it('SECRETARIA_CNC da paróquia 1 adiciona carismas a pessoa sem vínculo ativo', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 1 adiciona carismas a pessoa sem vínculo ativo', async () => {
     const response = await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaSemVinculo.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -184,7 +184,7 @@ describe('CarismaScope (e2e)', () => {
     expect(response.body.data.adicionados).toBe(1);
   });
 
-  it('SECRETARIA_CNC da paróquia 2 adiciona carismas a pessoa da própria paróquia', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 2 adiciona carismas a pessoa da própria paróquia', async () => {
     const response = await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria2}`)
@@ -194,7 +194,7 @@ describe('CarismaScope (e2e)', () => {
     expect(response.body.data.adicionados).toBe(1);
   });
 
-  it('SECRETARIA_CNC da paróquia 1 remove carismas de pessoa da própria paróquia', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 1 remove carismas de pessoa da própria paróquia', async () => {
     await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaPropria.id}`)
       .set('Authorization', `Bearer ${tokenSecretaria1}`)
@@ -209,7 +209,7 @@ describe('CarismaScope (e2e)', () => {
     expect(response.body.data.removidos).toBe(1);
   });
 
-  it('SECRETARIA_CNC da paróquia 1 não remove carismas de pessoa de outra paróquia', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 1 não remove carismas de pessoa de outra paróquia', async () => {
     await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenAdmin}`)
@@ -224,7 +224,7 @@ describe('CarismaScope (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it('SECRETARIA_CNC da paróquia 1 não adiciona carismas a pessoa inexistente', async () => {
+  it('SECRETARIA_PAROQUIA da paróquia 1 não adiciona carismas a pessoa inexistente', async () => {
     const response = await request(app.getHttpServer())
       .post('/carismas/pessoa/999999')
       .set('Authorization', `Bearer ${tokenSecretaria1}`)

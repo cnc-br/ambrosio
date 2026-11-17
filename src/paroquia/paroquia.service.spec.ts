@@ -158,7 +158,13 @@ describe('ParoquiaService', () => {
       // findOne interno + $transaction com client fake que grava o data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (prismaService as any).paroquia = {
+        findFirst: vi.fn().mockResolvedValue({ id: 1 }),
         findFirstOrThrow: vi.fn().mockResolvedValue(paroquiaRaw(1)),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }),
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (prismaService as any).usuarioSetor = {
+        findFirst: vi.fn().mockResolvedValue({ id: 1 }),
       };
 
       paroquiaUpdateMock = vi.fn();
@@ -180,6 +186,11 @@ describe('ParoquiaService', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       vi.spyOn((service as any).enderecoService, 'update').mockResolvedValue({
         id: 9,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      vi.spyOn((service as any).setorService, 'findOne').mockResolvedValue({
+        id: 2,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
     });
@@ -215,6 +226,212 @@ describe('ParoquiaService', () => {
         }),
       );
       expect(result.setor.id).toBe(1);
+    });
+  });
+
+  describe('escopo de escrita de paróquia', () => {
+    const criarAbility = (role: UserRoleEnum, id: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (service as any).abilityService.createForUser({ id, role });
+    };
+
+    const neutralizarPermissoes = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const svc = service as any;
+      vi.spyOn(svc, 'validateCreateAbility').mockImplementation(() => {});
+      vi.spyOn(svc, 'validateUpdateAbility').mockImplementation(() => {});
+      vi.spyOn(svc, 'validateDeleteAbility').mockImplementation(() => {});
+      vi.spyOn(svc, 'validateReadAbility').mockImplementation(() => {});
+    };
+
+    const createDto = {
+      descricao: 'Paróquia Nova',
+      diocese: { id: 1 },
+      setor: { id: 2 },
+      endereco: {
+        cep: '13208200',
+        logradouro: 'Rua Tiradentes',
+        numero: '4848',
+        bairro: 'Centro',
+        cidade: 'Judiaí',
+        UF: 'SP',
+      },
+    };
+
+    describe('create', () => {
+      beforeEach(() => {
+        neutralizarPermissoes();
+        criarAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-cnc');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const svc = service as any;
+        vi.spyOn(svc.dioceseService, 'findOne').mockResolvedValue({ id: 1 });
+        vi.spyOn(svc.setorService, 'findOne').mockResolvedValue({ id: 2 });
+        vi.spyOn(svc, 'createParoquiaTransaction').mockResolvedValue(
+          paroquiaRaw(2),
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).$transaction = vi.fn((callback: any) =>
+          callback({}),
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).usuarioSetor = { findFirst: vi.fn() };
+      });
+
+      it('SECRETARIA_CNC cadastra no próprio setor', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).usuarioSetor.findFirst.mockResolvedValue({
+          id: 1,
+        });
+
+        const result = await service.create(createDto as never);
+
+        expect(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (prismaService as any).usuarioSetor.findFirst,
+        ).toHaveBeenCalledWith({
+          where: { userId: 'usuario-cnc', setorId: 2 },
+        });
+        expect(result.setor.id).toBe(2);
+      });
+
+      it('SECRETARIA_CNC recebe 403 ao cadastrar em setor alheio', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).usuarioSetor.findFirst.mockResolvedValue(null);
+
+        await expect(service.create(createDto as never)).rejects.toThrow(
+          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((prismaService as any).$transaction).not.toHaveBeenCalled();
+      });
+
+      it('ADMIN cadastra sem restrição de setor', async () => {
+        criarAbility(UserRoleEnum.ADMIN, 'usuario-admin');
+
+        const result = await service.create(createDto as never);
+
+        expect(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (prismaService as any).usuarioSetor.findFirst,
+        ).not.toHaveBeenCalled();
+        expect(result.setor.id).toBe(2);
+      });
+    });
+
+    describe('update', () => {
+      const dtoBase = {
+        descricao: 'Nossa Senhora das Dores',
+        diocese: { id: 1 },
+        endereco: {
+          id: 9,
+          cep: '13208200',
+          logradouro: 'Rua Tiradentes',
+          numero: '4848',
+          bairro: 'Centro',
+          cidade: 'Judiaí',
+          UF: 'SP',
+        },
+      } as UpdateParoquiaDto;
+
+      beforeEach(() => {
+        neutralizarPermissoes();
+        criarAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-cnc');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const svc = service as any;
+        vi.spyOn(svc.dioceseService, 'findOne').mockResolvedValue({ id: 1 });
+        vi.spyOn(svc.enderecoService, 'update').mockResolvedValue({ id: 9 });
+        vi.spyOn(svc.setorService, 'findOne').mockResolvedValue({ id: 2 });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).paroquia = {
+          findFirst: vi.fn().mockResolvedValue({ id: 1 }),
+          findFirstOrThrow: vi.fn().mockResolvedValue(paroquiaRaw(1)),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }),
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).usuarioSetor = {
+          findFirst: vi.fn().mockResolvedValue({ id: 1 }),
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).$transaction = vi.fn((callback: any) =>
+          callback({ paroquia: { update: vi.fn().mockResolvedValue(paroquiaRaw(2)) } }),
+        );
+      });
+
+      it('SECRETARIA_CNC recebe 403 ao atualizar paróquia de setor alheio', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).paroquia.findFirst.mockResolvedValue(null);
+
+        await expect(service.update(1, dtoBase)).rejects.toThrow(
+          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((prismaService as any).$transaction).not.toHaveBeenCalled();
+      });
+
+      it('recebe 404 ao atualizar paróquia inexistente', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const prismaMock = (prismaService as any).paroquia;
+        prismaMock.findFirst.mockResolvedValue(null);
+        prismaMock.findUniqueOrThrow.mockRejectedValue(
+          new Error(`O registro de 'Paroquia' não foi encontrado.`),
+        );
+
+        await expect(service.update(999, dtoBase)).rejects.toThrow(
+          `O registro de 'Paroquia' não foi encontrado.`,
+        );
+      });
+
+      it('SECRETARIA_CNC recebe 403 ao mover paróquia para setor alheio', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).usuarioSetor.findFirst.mockResolvedValue(null);
+
+        await expect(
+          service.update(1, { ...dtoBase, setor: { id: 2 } }),
+        ).rejects.toThrow(
+          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+        );
+      });
+    });
+
+    describe('remove', () => {
+      beforeEach(() => {
+        neutralizarPermissoes();
+        criarAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-cnc');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).paroquia = {
+          findFirst: vi.fn().mockResolvedValue(null),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }),
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).$transaction = vi.fn();
+      });
+
+      it('SECRETARIA_CNC recebe 403 ao excluir paróquia de setor alheio', async () => {
+        await expect(service.remove(1)).rejects.toThrow(
+          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((prismaService as any).$transaction).not.toHaveBeenCalled();
+      });
+
+      it('ADMIN exclui sem restrição de setor', async () => {
+        criarAbility(UserRoleEnum.ADMIN, 'usuario-admin');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const prismaMock = (prismaService as any);
+        prismaMock.paroquia.findFirst.mockResolvedValue({ id: 1 });
+        prismaMock.$transaction = vi.fn((callback: never) =>
+          (callback as (tx: unknown) => unknown)({
+            paroquia: {
+              delete: vi.fn().mockResolvedValue(paroquiaRaw(1)),
+            },
+            endereco: { delete: vi.fn().mockResolvedValue({ id: 9 }) },
+          }),
+        );
+
+        const result = await service.remove(1);
+
+        expect(result.id).toBe(1);
+      });
     });
   });
 });
