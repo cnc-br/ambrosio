@@ -18,6 +18,8 @@ describe('AuthService', () => {
     findByIdWithPassword: ReturnType<typeof vi.fn>;
     findOneByEmail: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    changeOwnPassword: ReturnType<typeof vi.fn>;
+    setPasswordForRecovery: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
@@ -25,13 +27,18 @@ describe('AuthService', () => {
       findByIdWithPassword: vi.fn(),
       findOneByEmail: vi.fn(),
       update: vi.fn(),
+      changeOwnPassword: vi.fn(),
+      setPasswordForRecovery: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: JwtService, useValue: { sign: vi.fn() } },
-        { provide: SendEmailService, useValue: {} },
+        {
+          provide: SendEmailService,
+          useValue: { sendRecoveryEmail: vi.fn() },
+        },
         { provide: UsersService, useValue: usersServiceMock },
         { provide: CaslAbilityService, useValue: {} },
       ],
@@ -53,7 +60,7 @@ describe('AuthService', () => {
         active: true,
       });
       vi.mocked(bcrypt.compare).mockResolvedValue(true);
-      usersServiceMock.update.mockResolvedValue({ id: 'user-1' });
+      usersServiceMock.changeOwnPassword.mockResolvedValue(undefined);
 
       const result = await service.changePassword(
         'user-1',
@@ -64,9 +71,11 @@ describe('AuthService', () => {
       expect(usersServiceMock.findByIdWithPassword).toHaveBeenCalledWith(
         'user-1',
       );
-      expect(usersServiceMock.update).toHaveBeenCalledWith('user-1', {
-        password: 'nova-senha',
-      });
+      expect(usersServiceMock.changeOwnPassword).toHaveBeenCalledWith(
+        'user-1',
+        'nova-senha',
+      );
+      expect(usersServiceMock.update).not.toHaveBeenCalled();
       expect(result).toEqual({ message: 'Senha alterada com sucesso.' });
     });
 
@@ -82,7 +91,47 @@ describe('AuthService', () => {
         service.changePassword('user-1', 'senha-errada', 'nova-senha'),
       ).rejects.toThrow(UnauthorizedException);
 
+      expect(usersServiceMock.changeOwnPassword).not.toHaveBeenCalled();
       expect(usersServiceMock.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('define a senha temporária e os dados de recuperação pelo caminho dedicado', async () => {
+      usersServiceMock.findOneByEmail.mockResolvedValue({
+        id: 'user-1',
+        email: 'carmem@neocatecumenal.com.es',
+        role: 'SECRETARIA_CNC',
+      });
+      usersServiceMock.setPasswordForRecovery.mockResolvedValue(undefined);
+
+      const result = await service.forgotPassword(
+        'carmem@neocatecumenal.com.es',
+      );
+
+      expect(usersServiceMock.setPasswordForRecovery).toHaveBeenCalledWith(
+        'user-1',
+        {
+          password: expect.any(String),
+          resetPasswordToken: expect.any(String),
+          resetPasswordExpires: expect.any(Date),
+        },
+      );
+      expect(usersServiceMock.update).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        message: 'Email de recuperação enviado se o usuário existir.',
+      });
+    });
+
+    it('mantém a resposta genérica quando o email não existe', async () => {
+      usersServiceMock.findOneByEmail.mockResolvedValue(null);
+
+      const result = await service.forgotPassword('nao-existe@admin.com');
+
+      expect(usersServiceMock.setPasswordForRecovery).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        message: 'Email de recuperação enviado se o usuário existir.',
+      });
     });
   });
 });

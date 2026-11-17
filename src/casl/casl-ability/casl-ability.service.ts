@@ -16,7 +16,13 @@ import {
   user,
 } from 'src/prisma/generated-client.js';
 
-export type PermActions = 'manage' | 'create' | 'read' | 'update' | 'delete';
+export type PermActions =
+  | 'manage'
+  | 'create'
+  | 'read'
+  | 'update'
+  | 'delete'
+  | 'changePassword';
 
 export type PermissionResource =
   | Subjects<{
@@ -128,6 +134,7 @@ export class CaslAbilityService {
 
   createForUser(user: user) {
     const builder = new AbilityBuilder<AppAbility>(createPrismaAbility);
+    builder.can('changePassword', 'user');
     rolePermissionsMap[user.role](user, builder);
     this.ability = builder.build();
     this.userId = user.id;
