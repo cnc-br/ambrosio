@@ -173,7 +173,9 @@ describe('SetorController (e2e)', () => {
           },
         ];
 
-        expect(res.body.data).toEqual(expectedData);
+        expectedData.forEach((item, index) => {
+          expect(res.body.data[index]).toMatchObject(item);
+        });
       });
   });
 
@@ -182,7 +184,7 @@ describe('SetorController (e2e)', () => {
       .get('/setor/3')
       .expect(200)
       .expect((res) => {
-        expect(res.body.data).toEqual({
+        expect(res.body.data).toMatchObject({
           id: 3,
           descricao: 'Portinari - Setor 1',
           regiaoId: 1,
@@ -257,7 +259,9 @@ describe('SetorController (e2e)', () => {
           },
         ];
 
-        expect(res.body.data).toEqual(expectedData);
+        expectedData.forEach((item, index) => {
+          expect(res.body.data[index]).toMatchObject(item);
+        });
       });
   });
 });

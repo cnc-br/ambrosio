@@ -51,6 +51,7 @@ Convenção: controllers em `src/<modulo>/<modulo>.controller.ts` com `@Controll
 - **Logging**: `LoggingInterceptor` + pino, com `requestId` rastreável por request; modo ELK grava logs JSON em arquivo (`ELK_ENABLED=true`, ver README).
 - **Swagger**: anotações `@ApiTags`/`@ApiResponse` nos controllers, montado em `/api`.
 - **OpenSpec**: Respeite os comandos em `.opencode/commands/` e a fronteira de planejamento (`opsx-propose` vs `opsx-apply`).
+- **Auditoria de usuário**: toda nova tabela deve incluir `cadastradoPorId`, `atualizadoPorId`, `createdAt` e `updatedAt` (padrão do model `pessoa`), com autoria gravada via `@CurrentUser('id')` e nunca exposta nas respostas. Regra completa em `AGENTS.md` §2.4.
 
 ## Testes e2e
 

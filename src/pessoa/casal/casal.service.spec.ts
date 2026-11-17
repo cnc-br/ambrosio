@@ -211,6 +211,25 @@ describe('CasalService', () => {
       expect(pessoaCasalRepositoryMock.create).not.toHaveBeenCalled();
     });
 
+    it('createCasal grava o usuário autenticado na auditoria', async () => {
+      setAbility(UserRoleEnum.SECRETARIA_PAROQUIA, 'usuario-secretaria');
+      pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockResolvedValue(
+        pessoa,
+      );
+      prepararCasal();
+
+      await service.createCasal(createCasalDto, 'usuario-autor');
+
+      expect(pessoaCasalRepositoryMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pessoaMaridoId: expect.any(Number),
+          pessoaMulherId: expect.any(Number),
+          cadastradoPorId: 'usuario-autor',
+          atualizadoPorId: 'usuario-autor',
+        }),
+      );
+    });
+
     it('perfil sem permissão de criação de casal é rejeitado', async () => {
       setAbility(UserRoleEnum.NAO_IDENTIFICADO, 'usuario-nao-identificado');
       pessoaServiceMock.validarPessoaDentroDoEscopoDeAtualizacao.mockResolvedValue(

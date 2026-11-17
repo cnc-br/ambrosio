@@ -19,7 +19,7 @@ export class CarismaService extends BaseService {
     super(abilityService);
   }
 
-  create(createCarismaDto: CreateCarismaDto) {
+  create(createCarismaDto: CreateCarismaDto, userId?: string) {
     this.validateCreateAbility('carisma');
 
     return this.prisma.carisma.create({
@@ -27,6 +27,8 @@ export class CarismaService extends BaseService {
         descricao: createCarismaDto.descricao,
         tipo: createCarismaDto.tipo as TIPO_CARISMA_ENUM,
         casalAndaJunto: createCarismaDto.casalAndaJunto || false,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }
@@ -34,6 +36,7 @@ export class CarismaService extends BaseService {
   async addCarismaToPessoa(
     pessoaId: number,
     carismaDto: CreateCarismaDaPessoaDto,
+    userId?: string,
   ) {
     // Validações
     if (!pessoaId || pessoaId <= 0) {
@@ -99,6 +102,8 @@ export class CarismaService extends BaseService {
             pessoaId,
             carismaId,
             observacao: carismaDto.observacao?.trim() || null,
+            cadastradoPorId: userId ?? null,
+            atualizadoPorId: userId ?? null,
           })),
           skipDuplicates: true,
         });
@@ -280,7 +285,7 @@ export class CarismaService extends BaseService {
     });
   }
 
-  update(id: number, updateCarismaDto: UpdateCarismaDto) {
+  update(id: number, updateCarismaDto: UpdateCarismaDto, userId?: string) {
     this.validateUpdateAbility('carisma');
 
     if (!id || id <= 0) {
@@ -293,6 +298,7 @@ export class CarismaService extends BaseService {
         descricao: updateCarismaDto.descricao,
         tipo: updateCarismaDto.tipo as TIPO_CARISMA_ENUM,
         casalAndaJunto: updateCarismaDto.casalAndaJunto,
+        ...(userId ? { atualizadoPorId: userId } : {}),
       },
     });
   }

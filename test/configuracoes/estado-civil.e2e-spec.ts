@@ -1,14 +1,23 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { setupTestModule } from '../test-setup.js';
+import { PrismaService } from 'src/prisma.service.js';
 
 describe('EstadoCivilController (e2e)', () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   const principal = 'estado-civil';
   let token = '';
+  let adminUserId = '';
 
   beforeAll(async () => {
     app = await setupTestModule();
+    prisma = app.get(PrismaService);
+
+    const admin = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@admin.com' },
+    });
+    adminUserId = admin.id;
 
     const response = await request(app.getHttpServer())
       .post('/auth/login')
@@ -29,7 +38,9 @@ describe('EstadoCivilController (e2e)', () => {
       .expect((res) => {
         expect(res.body).toBeInstanceOf(Object);
         expect(res.body.data).toBeInstanceOf(Array);
-        expect(res.body.data).toContainEqual({ id: 2, descricao: 'CASADO(A)' });
+        expect(res.body.data).toContainEqual(
+          expect.objectContaining({ id: 2, descricao: 'CASADO(A)' }),
+        );
       });
   });
 
@@ -40,7 +51,9 @@ describe('EstadoCivilController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(res.body.data).not.toBeInstanceOf(Array);
-        expect(res.body.data).toEqual({ id: 2, descricao: 'CASADO(A)' });
+        expect(res.body.data).toEqual(
+          expect.objectContaining({ id: 2, descricao: 'CASADO(A)' }),
+        );
         expect(res.body.data.id).toEqual(2);
         expect(res.body.data.descricao).toEqual('CASADO(A)');
       });
@@ -103,5 +116,22 @@ describe('EstadoCivilController (e2e)', () => {
         );
         expect(res.body.statusCode).toBe(404);
       });
+  });
+
+  it(`/${principal} (POST) - 201 | registra o usuário autenticado e não expõe auditoria`, async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/${principal}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ descricao: `AUDIT ${Date.now()}` });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+    expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+    const criado = await prisma.estadoCivil.findUniqueOrThrow({
+      where: { id: response.body.data.id },
+    });
+    expect(criado.cadastradoPorId).toBe(adminUserId);
+    expect(criado.atualizadoPorId).toBe(adminUserId);
   });
 });

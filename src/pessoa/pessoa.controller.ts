@@ -121,8 +121,11 @@ export class PessoaController {
       },
     },
   })
-  createCasal(@Body() createCasalDto: CreateCasalDto) {
-    return this.casalService.createCasal(createCasalDto);
+  createCasal(
+    @Body() createCasalDto: CreateCasalDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.casalService.createCasal(createCasalDto, userId);
   }
 
   @Post('/:id/contato')

@@ -21,11 +21,13 @@ describe('SituacaoReligiosaController (e2e)', () => {
       .expect((res) => {
         expect(res.body).toBeInstanceOf(Object);
         expect(res.body.data).toBeInstanceOf(Array);
-        expect(res.body.data).toContainEqual({
-          id: 2,
-          descricao: 'Seminarista',
-          sexoUnico: "MASCULINO",
-        });
+        expect(res.body.data).toContainEqual(
+          expect.objectContaining({
+            id: 2,
+            descricao: 'Seminarista',
+            sexoUnico: 'MASCULINO',
+          }),
+        );
       });
   });
 
@@ -35,11 +37,13 @@ describe('SituacaoReligiosaController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(res.body.data).not.toBeInstanceOf(Array);
-        expect(res.body.data).toEqual({
-          id: 7,
-          descricao: 'Arcebispo',
-          sexoUnico: 'MASCULINO',
-        });
+        expect(res.body.data).toEqual(
+          expect.objectContaining({
+            id: 7,
+            descricao: 'Arcebispo',
+            sexoUnico: 'MASCULINO',
+          }),
+        );
         expect(res.body.data.id).toEqual(7);
         expect(res.body.data.descricao).toEqual('Arcebispo');
       });

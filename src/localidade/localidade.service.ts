@@ -13,31 +13,23 @@ export class LocalidadeService {
     private enderecoService: EnderecoService,
   ) {}
 
-  async create(createLocalidadeDto: CreateLocalidadeDto) {
+  async create(createLocalidadeDto: CreateLocalidadeDto, userId?: string) {
     const endereco = await this.enderecoService.create(
       createLocalidadeDto.endereco,
+      undefined,
+      userId,
     );
 
     try {
       const localidade = await this.prisma.localidade.create({
         data: {
           descricao: createLocalidadeDto.descricao,
-          diocese: {
-            connect: {
-              id: createLocalidadeDto.diocese.id,
-            },
-          },
-          tipoLocalidade: {
-            connect: {
-              id: createLocalidadeDto.tipoLocalidade.id,
-            },
-          },
+          dioceseId: createLocalidadeDto.diocese.id,
+          tipoLocalidadeId: createLocalidadeDto.tipoLocalidade.id,
           observacao: createLocalidadeDto.observacao,
-          endereco: {
-            connect: {
-              id: endereco.id,
-            },
-          },
+          enderecoId: endereco.id,
+          cadastradoPorId: userId ?? null,
+          atualizadoPorId: userId ?? null,
         },
       });
 

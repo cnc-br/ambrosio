@@ -14,7 +14,7 @@ export class HistoricoService extends BaseService {
     super(abilityService);
   }
 
-  create(createHistoricoDto: CreateHistoricoDto) {
+  create(createHistoricoDto: CreateHistoricoDto, userId?: string) {
     const descricao = `Comunidade: ${createHistoricoDto.numeroComunidade}
       # Catequistas: ${createHistoricoDto.catequistas ?? SEM_INFORMACAO}
       # Local Convivência: ${createHistoricoDto.localConvivencia ?? SEM_INFORMACAO}
@@ -27,6 +27,8 @@ export class HistoricoService extends BaseService {
       data: {
         comunidadeId: createHistoricoDto.comunidadeId,
         descricao,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }

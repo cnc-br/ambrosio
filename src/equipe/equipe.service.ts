@@ -23,7 +23,7 @@ export class EquipeService extends BaseService {
     super(abilityService);
   }
 
-  async create(createEquipeDto: CreateEquipeDto) {
+  async create(createEquipeDto: CreateEquipeDto, userId?: string) {
     this.validateCreateAbility('equipe');
 
     const tipoEquipe = await this.tipoEquipeService.findOne(
@@ -35,6 +35,8 @@ export class EquipeService extends BaseService {
         descricao: createEquipeDto.descricao,
         tipoEquipeId: tipoEquipe.id,
         observacao: createEquipeDto.observacao,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
 
@@ -42,6 +44,7 @@ export class EquipeService extends BaseService {
       result.id,
       result.descricao,
       createEquipeDto.pessoas,
+      userId,
     );
 
     return this.prisma.equipe.findUnique({
@@ -88,7 +91,7 @@ export class EquipeService extends BaseService {
     return serializeEquipeResponse(result, pessoas);
   }
 
-  async update(id: number, updateEquipeDto: UpdateEquipeDto) {
+  async update(id: number, updateEquipeDto: UpdateEquipeDto, userId?: string) {
     this.validateUpdateAbility('equipe');
     await this.prisma.equipe.update({
       where: { id },
@@ -96,6 +99,7 @@ export class EquipeService extends BaseService {
         descricao: updateEquipeDto.descricao,
         observacao: updateEquipeDto.observacao,
         tipoEquipeId: updateEquipeDto.tipoEquipeId,
+        ...(userId ? { atualizadoPorId: userId } : {}),
       },
     });
 
@@ -103,6 +107,7 @@ export class EquipeService extends BaseService {
       id,
       updateEquipeDto.descricao,
       updateEquipeDto.pessoas,
+      userId,
     );
 
     return this.prisma.equipe.findUnique({
@@ -123,6 +128,7 @@ export class EquipeService extends BaseService {
     equipeId: number,
     descricaoEquipe: string,
     pessoas: { id: number }[],
+    userId?: string,
   ) {
     for (const pessoa of pessoas) {
       await this.pessoaService.findOne(pessoa.id);
@@ -135,11 +141,14 @@ export class EquipeService extends BaseService {
         },
         update: {
           observacao: `Equipe/Pessoa de: ${descricaoEquipe}`,
+          ...(userId ? { atualizadoPorId: userId } : {}),
         },
         create: {
           equipeId,
           pessoaId: pessoa.id,
           observacao: `Equipe/Pessoa de: ${descricaoEquipe}`,
+          cadastradoPorId: userId ?? null,
+          atualizadoPorId: userId ?? null,
         },
       });
     }

@@ -51,6 +51,8 @@ describe('AvisosService', () => {
       data: {
         texto: 'Novo horário de missas',
         dataFim: '2026-12-31T23:59:59.000Z',
+        cadastradoPorId: null,
+        atualizadoPorId: null,
       },
     });
     expect(resultado).toEqual(avisoCriado);
@@ -123,5 +125,35 @@ describe('AvisosService', () => {
       data: { texto: 'Só o texto' },
     });
     expect(resultado.texto).toBe('Só o texto');
+  });
+
+  it('create grava o usuário autenticado na auditoria', async () => {
+    create.mockResolvedValue({ id: 1 });
+
+    await service.create(
+      {
+        texto: 'Aviso auditado',
+        dataFim: '2026-12-31T23:59:59.000Z',
+      },
+      'usuario-autor',
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        cadastradoPorId: 'usuario-autor',
+        atualizadoPorId: 'usuario-autor',
+      }),
+    });
+  });
+
+  it('update grava o usuário autenticado em atualizadoPorId', async () => {
+    update.mockResolvedValue({ id: 7 });
+
+    await service.update(7, { texto: 'Editado' }, 'usuario-editor');
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { texto: 'Editado', atualizadoPorId: 'usuario-editor' },
+    });
   });
 });

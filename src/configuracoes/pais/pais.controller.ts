@@ -1,14 +1,27 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { PaisService } from './pais.service.js';
 import { CreatePaisDto } from './dto/create-pais.dto.js';
+import { OptionalAuthGuard } from 'src/auth/optional-auth.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @Controller('pais')
 export class PaisController {
   constructor(private readonly paisService: PaisService) {}
 
   @Post()
-  create(@Body() createPaisDto: CreatePaisDto) {
-    return this.paisService.create(createPaisDto);
+  @UseGuards(OptionalAuthGuard)
+  create(
+    @Body() createPaisDto: CreatePaisDto,
+    @CurrentUser('id') userId?: string,
+  ) {
+    return this.paisService.create(createPaisDto, userId);
   }
 
   @Get()

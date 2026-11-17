@@ -73,7 +73,9 @@ describe('RegiaoController (e2e)', () => {
           },
         ];
 
-        expect(res.body.data).toEqual(expectedData);
+        expectedData.forEach((item, index) => {
+          expect(res.body.data[index]).toMatchObject(item);
+        });
       });
   });
 
@@ -82,7 +84,7 @@ describe('RegiaoController (e2e)', () => {
       .get('/regiao/3')
       .expect(200)
       .expect((res) => {
-        expect(res.body.data).toEqual({
+        expect(res.body.data).toMatchObject({
           id: 3,
           descricao: 'Piauí',
           macroRegiaoId: 3,

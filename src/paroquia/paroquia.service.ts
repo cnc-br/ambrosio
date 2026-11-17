@@ -32,7 +32,7 @@ export class ParoquiaService extends BaseService {
     super(abilityService);
   }
 
-  async create(createParoquiaDto: CreateParoquiaDto) {
+  async create(createParoquiaDto: CreateParoquiaDto, userId?: string) {
     this.validateCreateAbility('paroquia');
     await this.dioceseService.findOne(createParoquiaDto.diocese.id);
     await this.setorService.findOne(createParoquiaDto.setor.id);
@@ -40,7 +40,11 @@ export class ParoquiaService extends BaseService {
 
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
-        return this.createParoquiaTransaction(createParoquiaDto, transaction);
+        return this.createParoquiaTransaction(
+          createParoquiaDto,
+          transaction,
+          userId,
+        );
       });
 
       return serializeParoquia(result);
@@ -97,6 +101,7 @@ export class ParoquiaService extends BaseService {
   async update(
     id: number,
     updateParoquiaDto: UpdateParoquiaDto,
+    userId?: string,
   ): Promise<Paroquia> {
     this.validateUpdateAbility('paroquia');
     await this.validarParoquiaNoEscopoDoUsuario(id);
@@ -128,6 +133,7 @@ export class ParoquiaService extends BaseService {
           updateParoquiaDto.endereco.id,
           updateParoquiaDto.endereco,
           transaction,
+          userId,
         );
 
         return await transaction.paroquia.update({
@@ -138,6 +144,7 @@ export class ParoquiaService extends BaseService {
             ...(updateParoquiaDto.setor && {
               setorId: updateParoquiaDto.setor.id,
             }),
+            ...(userId ? { atualizadoPorId: userId } : {}),
           },
           select: PAROQUIA_SELECT,
           where: {
@@ -235,6 +242,7 @@ export class ParoquiaService extends BaseService {
   private async createParoquiaTransaction(
     createParoquiaDto: CreateParoquiaDto,
     transaction: Prisma.TransactionClient,
+    userId?: string,
   ): Promise<Paroquia> {
     const endereco = await this.enderecoService.create(
       {
@@ -242,6 +250,7 @@ export class ParoquiaService extends BaseService {
         observacao: `End. da paróquia ${createParoquiaDto.descricao}.`,
       },
       transaction,
+      userId,
     );
 
     const paroquia = await transaction.paroquia.create({
@@ -250,6 +259,8 @@ export class ParoquiaService extends BaseService {
         enderecoId: endereco.id,
         dioceseId: createParoquiaDto.diocese.id,
         setorId: createParoquiaDto.setor.id,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
       select: PAROQUIA_SELECT,
     });

@@ -2,14 +2,17 @@ import { INestApplication } from '@nestjs/common';
 import { setupTestModule } from './test-setup.js';
 import request from 'supertest';
 import { faker } from '@faker-js/faker/locale/pt_BR';
+import { PrismaService } from 'src/prisma.service.js';
 
 describe('DioceseController (e2e)', () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   const principal = 'diocese';
   let token = '';
 
   beforeAll(async () => {
     app = await setupTestModule();
+    prisma = app.get(PrismaService);
 
     const response = await request(app.getHttpServer())
       .post('/auth/login')
@@ -303,5 +306,83 @@ describe('DioceseController (e2e)', () => {
         expect(res.body.error).toBe('Not Found');
         expect(res.body.statusCode).toBe(404);
       });
+  });
+
+  describe('auditoria de usuário', () => {
+    let adminUserId = '';
+
+    const payloadDiocese = () => ({
+      descricao: faker.company.name(),
+      tipoDiocese: { id: 2, descricao: 'Diocese' },
+      endereco: {
+        cep: '13208200',
+        logradouro: faker.location.streetAddress(),
+        numero: '400',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: faker.location.city(),
+      },
+    });
+
+    beforeAll(async () => {
+      const admin = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@admin.com' },
+      });
+      adminUserId = admin.id;
+    });
+
+    it(`/${principal} (POST) - 201 | registra o usuário autenticado na diocese e no endereço`, async () => {
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(payloadDiocese())
+        .expect(201);
+
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+
+      const criada = await prisma.diocese.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criada.cadastradoPorId).toBe(adminUserId);
+      expect(criada.atualizadoPorId).toBe(adminUserId);
+
+      const endereco = await prisma.endereco.findUniqueOrThrow({
+        where: { id: response.body.data.endereco.id },
+      });
+      expect(endereco.cadastradoPorId).toBe(adminUserId);
+    });
+
+    it(`/${principal}/:id (PATCH) - 200 | registra o usuário autenticado em atualizadoPorId`, async () => {
+      const criada = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(payloadDiocese())
+        .expect(201);
+
+      await prisma.diocese.update({
+        where: { id: criada.body.data.id },
+        data: { cadastradoPorId: null, atualizadoPorId: null },
+      });
+
+      const payload = payloadDiocese();
+      const response = await request(app.getHttpServer())
+        .patch(`/${principal}/${criada.body.data.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ...payload,
+          endereco: {
+            ...payload.endereco,
+            id: criada.body.data.endereco.id,
+          },
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const atualizada = await prisma.diocese.findUniqueOrThrow({
+        where: { id: criada.body.data.id },
+      });
+      expect(atualizada.atualizadoPorId).toBe(adminUserId);
+    });
   });
 });

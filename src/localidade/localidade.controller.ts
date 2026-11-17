@@ -14,6 +14,7 @@ import { UpdateLocalidadeDto } from './dto/update-localidade.dto.js';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @ApiTags('Localidades do caminho')
 @UseGuards(AuthGuard, RoleGuard)
@@ -22,8 +23,11 @@ export class LocalidadeController {
   constructor(private readonly localidadeService: LocalidadeService) {}
 
   @Post()
-  create(@Body() createLocalidadeDto: CreateLocalidadeDto) {
-    return this.localidadeService.create(createLocalidadeDto);
+  create(
+    @Body() createLocalidadeDto: CreateLocalidadeDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.localidadeService.create(createLocalidadeDto, userId);
   }
 
   @Get()

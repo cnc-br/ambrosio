@@ -316,6 +316,74 @@ describe('ParoquiaService', () => {
         ).not.toHaveBeenCalled();
         expect(result.setor.id).toBe(2);
       });
+
+      it('repassa o usuário autenticado para a transação de criação', async () => {
+        criarAbility(UserRoleEnum.ADMIN, 'usuario-admin');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const spy = vi.spyOn(service as any, 'createParoquiaTransaction');
+
+        await service.create(createDto as never, 'usuario-autor');
+
+        expect(spy).toHaveBeenCalledWith(
+          createDto,
+          expect.anything(),
+          'usuario-autor',
+        );
+      });
+
+      it('repassa o usuário autenticado para o endereço no update', async () => {
+        criarAbility(UserRoleEnum.ADMIN, 'usuario-admin');
+        const spy = vi.spyOn(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (service as any).enderecoService,
+          'update',
+        );
+        spy.mockResolvedValue({ id: 9 });
+
+        const paroquiaAtual = { ...paroquiaRaw(2), endereco: { id: 9 } };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.spyOn(service as any, 'findOne').mockResolvedValue(
+          paroquiaAtual as never,
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.spyOn(service as any, 'validarParoquiaNoEscopoDoUsuario').mockResolvedValue(
+          undefined,
+        );
+         
+        const update = vi.fn().mockResolvedValue(paroquiaRaw(2));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).$transaction = vi.fn((cb: any) =>
+          cb({ paroquia: { update } }),
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        vi.spyOn(service as any, 'validarEnderecoPertenceParoquia').mockImplementation(
+          () => {},
+        );
+
+        await service.update(
+          2,
+          {
+            descricao: 'Paróquia Editada',
+            diocese: { id: 1 },
+            endereco: { id: 9 },
+          } as never,
+          'usuario-editor',
+        );
+
+        expect(spy).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+          'usuario-editor',
+        );
+        expect(update).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              atualizadoPorId: 'usuario-editor',
+            }),
+          }),
+        );
+      });
     });
 
     describe('update', () => {

@@ -4,6 +4,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { CreateEstadoCivilDto } from './dto/create-estado-civil.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @ApiTags('Estado Civil')
 @UseGuards(AuthGuard, RoleGuard)
@@ -22,7 +23,10 @@ export class EstadoCivilController {
   }
 
   @Post()
-  create(@Body() createEstadoCivilDto: CreateEstadoCivilDto) {
-    return this.estadoCivilService.create(createEstadoCivilDto);
+  create(
+    @Body() createEstadoCivilDto: CreateEstadoCivilDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.estadoCivilService.create(createEstadoCivilDto, userId);
   }
 }

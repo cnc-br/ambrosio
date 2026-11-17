@@ -25,6 +25,7 @@ import { UserRoleEnum } from 'neocatecumenal';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RequiredRoles } from 'src/auth/required-roles.decorator.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 import { AvisosService } from './avisos.service.js';
 import { CreateAvisoDto } from './dto/create-aviso.dto.js';
 import { UpdateAvisoDto } from './dto/update-aviso.dto.js';
@@ -49,8 +50,11 @@ export class AvisosController {
   })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido.' })
   @ApiForbiddenResponse({ description: 'Usuário sem o papel ADMIN.' })
-  create(@Body() createAvisoDto: CreateAvisoDto) {
-    return this.avisosService.create(createAvisoDto);
+  create(
+    @Body() createAvisoDto: CreateAvisoDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.avisosService.create(createAvisoDto, userId);
   }
 
   @Get()
@@ -114,7 +118,8 @@ export class AvisosController {
     )
     id: number,
     @Body() updateAvisoDto: UpdateAvisoDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.avisosService.update(id, updateAvisoDto);
+    return this.avisosService.update(id, updateAvisoDto, userId);
   }
 }

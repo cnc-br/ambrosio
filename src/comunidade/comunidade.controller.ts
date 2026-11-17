@@ -23,6 +23,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ComunidadeService } from './comunidade.service.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @ApiTags('Comunidade')
 @UseGuards(AuthGuard, RoleGuard)
@@ -32,8 +33,11 @@ export class ComunidadeController {
 
   @Post()
   @ApiCreatedResponse({ description: 'Comunidade criada com sucesso.' })
-  create(@Body() createComunidadeDto: CreateComunidadeDto) {
-    return this.comunidadeService.create(createComunidadeDto);
+  create(
+    @Body() createComunidadeDto: CreateComunidadeDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.comunidadeService.create(createComunidadeDto, userId);
   }
 
   @Post(':id/pessoa/:pessoaId')
@@ -46,8 +50,9 @@ export class ComunidadeController {
   adicionarPessoa(
     @Param('id') id: string,
     @Param('pessoaId') pessoaId: string,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.comunidadeService.adicionarPessoa(+id, +pessoaId);
+    return this.comunidadeService.adicionarPessoa(+id, +pessoaId, userId);
   }
 
   @Delete(':id/pessoa/:pessoaId')
@@ -104,8 +109,9 @@ export class ComunidadeController {
   update(
     @Param('id') id: string,
     @Body() updateComunidadeDto: UpdateComunidadeDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.comunidadeService.update(+id, updateComunidadeDto);
+    return this.comunidadeService.update(+id, updateComunidadeDto, userId);
   }
 
   @Delete(':id')

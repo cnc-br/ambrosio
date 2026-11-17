@@ -21,7 +21,9 @@ describe('EscolaridadeController (e2e)', () => {
       .expect((res) => {
         expect(res.body).toBeInstanceOf(Object);
         expect(res.body.data).toBeInstanceOf(Array);
-        expect(res.body.data).toContainEqual({ id: 2, descricao: 'Ensino Fundamental' });
+        expect(res.body.data).toContainEqual(
+          expect.objectContaining({ id: 2, descricao: 'Ensino Fundamental' }),
+        );
       });
   });
 
@@ -31,10 +33,9 @@ describe('EscolaridadeController (e2e)', () => {
       .expect(200)
       .expect((res) => {
         expect(res.body.data).not.toBeInstanceOf(Array);
-        expect(res.body.data).toEqual({
-          id: 2,
-          descricao: 'Ensino Fundamental',
-        });
+        expect(res.body.data).toEqual(
+          expect.objectContaining({ id: 2, descricao: 'Ensino Fundamental' }),
+        );
         expect(res.body.data.id).toEqual(2);
         expect(res.body.data.descricao).toEqual('Ensino Fundamental');
       });

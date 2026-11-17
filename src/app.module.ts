@@ -16,6 +16,7 @@ import { LocalidadeModule } from './localidade/localidade.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { PaginationInterceptor } from './commons/interceptors/pagination.interceptors.js';
+import { AuditoriaInterceptor } from './commons/interceptors/auditoria.interceptor.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CaslModule } from './casl/casl.module.js';
@@ -167,6 +168,10 @@ function stringifyRequestBody(body: unknown): string | undefined {
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditoriaInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

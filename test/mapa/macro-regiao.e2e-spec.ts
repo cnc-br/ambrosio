@@ -32,7 +32,9 @@ describe('MacroRegiaoController (e2e)', () => {
           { id: 3, descricao: 'Goiás', ativo: true },
         ];
 
-        expect(res.body.data).toEqual(expectedData);
+        expectedData.forEach((item, index) => {
+          expect(res.body.data[index]).toMatchObject(item);
+        });
       });
   });
 
@@ -41,7 +43,7 @@ describe('MacroRegiaoController (e2e)', () => {
       .get('/macro-regiao/2')
       .expect(200)
       .expect((res) => {
-        expect(res.body.data).toEqual({
+        expect(res.body.data).toMatchObject({
           id: 2,
           descricao: 'Brasília',
           ativo: true,

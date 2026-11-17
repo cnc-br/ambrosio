@@ -24,8 +24,24 @@ describe('MacroRegiaoController', () => {
 
   it('should return all macro-regioes', async () => {
     const macroRegioes = [
-      { id: 1, descricao: 'Macro Região 1', ativo: true },
-      { id: 2, descricao: 'Macro Região 2', ativo: false },
+      {
+        id: 1,
+        descricao: 'Macro Região 1',
+        ativo: true,
+        cadastradoPorId: null,
+        atualizadoPorId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 2,
+        descricao: 'Macro Região 2',
+        ativo: false,
+        cadastradoPorId: null,
+        atualizadoPorId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
     vi.spyOn(prisma.macroRegiao, 'findMany').mockResolvedValue(macroRegioes);
 
@@ -33,7 +49,15 @@ describe('MacroRegiaoController', () => {
   });
 
   it('should return a macro-regiao by id', async () => {
-    const macroRegiao = { id: 1, descricao: 'Macro Região 1', ativo: true };
+    const macroRegiao = {
+      id: 1,
+      descricao: 'Macro Região 1',
+      ativo: true,
+      cadastradoPorId: null,
+      atualizadoPorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     vi.spyOn(prisma.macroRegiao, 'findUniqueOrThrow').mockResolvedValue(macroRegiao);
 
     expect(await controller.findOne('1')).toEqual(macroRegiao);

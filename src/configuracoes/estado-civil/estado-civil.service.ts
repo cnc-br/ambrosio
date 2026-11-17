@@ -23,11 +23,15 @@ export class EstadoCivilService extends BaseService {
     });
   }
 
-  create(createEstadoCivilDto: CreateEstadoCivilDto) {
+  create(createEstadoCivilDto: CreateEstadoCivilDto, userId?: string) {
     this.validateCreateAbility('estadoCivil');
 
     return this.prisma.estadoCivil.create({
-      data: createEstadoCivilDto,
+      data: {
+        ...createEstadoCivilDto,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
+      },
     });
   }
 }

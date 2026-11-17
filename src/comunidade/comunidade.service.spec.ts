@@ -145,7 +145,13 @@ describe('ComunidadeService', () => {
       }),
     );
     expect(create).toHaveBeenCalledWith({
-      data: { comunidadeId: 1, pessoaId: 2, dataEntrada: expect.any(Date) },
+      data: {
+        comunidadeId: 1,
+        pessoaId: 2,
+        dataEntrada: expect.any(Date),
+        cadastradoPorId: null,
+        atualizadoPorId: null,
+      },
     });
   });
 
@@ -335,5 +341,129 @@ describe('ComunidadeService', () => {
     expect(result.carismas).toHaveLength(1);
     // nome fica vazio quando a resolução externa falha, mas a serialização não quebra
     expect(result.carismas[0].pessoas[0].nome).toBe('');
+  });
+
+  describe('auditoria de usuário', () => {
+    const criarCaslService = () => {
+      const caslAbilityService = new CaslAbilityService();
+      caslAbilityService.createForUser({
+        id: 'usuario-autor',
+        role: UserRoleEnum.SECRETARIA_PAROQUIA,
+      } as unknown as Parameters<CaslAbilityService['createForUser']>[0]);
+      return caslAbilityService;
+    };
+
+    it('create grava a autoria na comunidade e no histórico', async () => {
+      const comunidadeCriada = {
+        id: 1,
+        numeroDaComunidade: 10,
+        quantidadeMembros: 5,
+      };
+      const paroquiaFindFirst = vi.fn().mockResolvedValue({ id: 1 });
+      const comunidadeCreate = vi.fn().mockResolvedValue(comunidadeCriada);
+      const historicoCreate = vi.fn().mockResolvedValue({ id: 1 });
+      const prismaMock = {
+        paroquia: { findFirst: paroquiaFindFirst },
+        comunidade: {
+          create: comunidadeCreate,
+          findFirst: vi.fn().mockResolvedValue(comunidadeCriada),
+        },
+      } as unknown as PrismaService;
+
+      const scopedService = new ComunidadeService(
+        prismaMock,
+        { create: historicoCreate } as unknown as HistoricoService,
+        criarCaslService(),
+        {
+          findExternalPessoaByUuid: vi.fn(),
+        } as unknown as SaoPedroPessoaService,
+      );
+      vi.spyOn(scopedService, 'findOne').mockResolvedValue(
+        comunidadeCriada as never,
+      );
+
+      await scopedService.create(
+        {
+          numeroDaComunidade: 10,
+          quantidadeMembros: 5,
+          paroquiaId: 1,
+        } as never,
+        'usuario-autor',
+      );
+
+      expect(comunidadeCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          cadastradoPorId: 'usuario-autor',
+          atualizadoPorId: 'usuario-autor',
+        }),
+      });
+      expect(historicoCreate).toHaveBeenCalledWith(
+        expect.any(Object),
+        'usuario-autor',
+      );
+    });
+
+    it('update grava atualizadoPorId e repassa o usuário ao histórico', async () => {
+      const comunidadeFindFirst = vi.fn().mockResolvedValue({ id: 1 });
+      const comunidadeUpdate = vi.fn().mockResolvedValue({ id: 1 });
+      const historicoCreate = vi.fn().mockResolvedValue({ id: 1 });
+      const prismaMock = {
+        comunidade: {
+          findFirst: comunidadeFindFirst,
+          update: comunidadeUpdate,
+        },
+      } as unknown as PrismaService;
+
+      const scopedService = new ComunidadeService(
+        prismaMock,
+        { create: historicoCreate } as unknown as HistoricoService,
+        criarCaslService(),
+        {
+          findExternalPessoaByUuid: vi.fn(),
+        } as unknown as SaoPedroPessoaService,
+      );
+
+      await scopedService.update(
+        1,
+        { numeroDaComunidade: 10, quantidadeMembros: 6 } as never,
+        'usuario-editor',
+      );
+
+      expect(comunidadeUpdate).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({ atualizadoPorId: 'usuario-editor' }),
+      });
+      expect(historicoCreate).toHaveBeenCalledWith(
+        expect.any(Object),
+        'usuario-editor',
+      );
+    });
+
+    it('adicionarPessoa grava a autoria no vínculo comunidadePessoa', async () => {
+      const create = vi.fn().mockResolvedValue({ comunidadeId: 1, pessoaId: 2 });
+      const prismaMock = {
+        comunidade: { findFirst: vi.fn().mockResolvedValue({ id: 1 }) },
+        pessoa: { findFirst: vi.fn().mockResolvedValue({ id: 2 }) },
+        comunidadePessoa: { create },
+      } as unknown as PrismaService;
+
+      const scopedService = new ComunidadeService(
+        prismaMock,
+        {} as HistoricoService,
+        criarCaslService(),
+        {
+          findExternalPessoaByUuid: vi.fn(),
+        } as unknown as SaoPedroPessoaService,
+      );
+
+      await scopedService.adicionarPessoa(1, 2, 'usuario-autor');
+
+      expect(create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          cadastradoPorId: 'usuario-autor',
+          atualizadoPorId: 'usuario-autor',
+        }),
+      });
+    });
   });
 });

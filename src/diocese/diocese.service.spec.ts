@@ -73,4 +73,45 @@ describe('DioceseService', () => {
     expect(enderecoService).toBeDefined();
     expect(abilityService).toBeDefined();
   });
+
+  it('create grava a autoria e repassa o usuário ao endereço', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = service as any;
+    vi.spyOn(svc, 'validateCreateAbility').mockImplementation(() => {});
+    vi.spyOn(tipoDioceseService, 'findOne').mockResolvedValue({
+      id: 1,
+    } as never);
+    const enderecoCreate = vi
+      .spyOn(enderecoService, 'create')
+      .mockResolvedValue({ id: 9 } as never);
+    vi.spyOn(svc, 'serializeResponse').mockReturnValue({} as never);
+
+    const dioceseCreate = vi.fn().mockResolvedValue({ id: 1 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (prismaService as any).$transaction = vi.fn((callback: any) =>
+      callback({ diocese: { create: dioceseCreate } }),
+    );
+
+    await service.create(
+      {
+        descricao: 'Diocese Nova',
+        tipoDiocese: { id: 1 },
+        endereco: { cep: '13208200' },
+      } as never,
+      'usuario-autor',
+    );
+
+    expect(enderecoCreate).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      'usuario-autor',
+    );
+    expect(dioceseCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        cadastradoPorId: 'usuario-autor',
+        atualizadoPorId: 'usuario-autor',
+      }),
+      select: expect.anything(),
+    });
+  });
 });
