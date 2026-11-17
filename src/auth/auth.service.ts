@@ -61,7 +61,7 @@ export class AuthService {
     // TODO: isso é uma pratica insegura, deve ser implementado um sistema de token mais robusto
     const tempPassword = Math.random().toString(36).slice(-8);
 
-    await this.userService.update(user.id, {
+    await this.userService.setPasswordForRecovery(user.id, {
       password: tempPassword,
       resetPasswordToken: tokenHash,
       resetPasswordExpires: new Date(Date.now() + 1000 * 60 * 30), // 30 min
@@ -94,9 +94,14 @@ export class AuthService {
       throw new UnauthorizedException('Senha atual incorreta.');
     }
 
-    await this.userService.update(userId, {
-      password: newPassword,
-    });
+    try {
+      await this.userService.changeOwnPassword(userId, newPassword);
+    } catch (error) {
+      this.logger.error(
+        `Erro ao alterar senha para usuário ${userId}: ${error.message}`,
+      );
+      throw new UnauthorizedException('Erro ao alterar senha.');
+    }
 
     this.logger.log(`Senha alterada com sucesso para usuário ${userId}`);
     return { message: 'Senha alterada com sucesso.' };

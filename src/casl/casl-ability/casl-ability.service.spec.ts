@@ -192,5 +192,35 @@ describe('CaslAbilityService', () => {
     expect(service.ability.can('read', 'scheduledJobExecution')).toBe(false);
     expect(service.ability.can('delete', 'scheduledJobExecution')).toBe(false);
   });
+
+  it.each(Object.values(UserRoleEnum))(
+    'permite que o perfil %s troque a própria senha',
+    (role) => {
+      const user = {
+        id: `usuario-${role}`,
+        role,
+      } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+      service.createForUser(user);
+
+      expect(service.ability.can('changePassword', 'user')).toBe(true);
+    },
+  );
+
+  it.each(
+    Object.values(UserRoleEnum).filter((role) => role !== UserRoleEnum.ADMIN),
+  )(
+    'não concede update user ao perfil %s por causa da troca de senha',
+    (role) => {
+      const user = {
+        id: `usuario-${role}`,
+        role,
+      } as unknown as Parameters<CaslAbilityService['createForUser']>[0];
+
+      service.createForUser(user);
+
+      expect(service.ability.can('update', 'user')).toBe(false);
+    },
+  );
 });
 

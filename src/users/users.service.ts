@@ -82,7 +82,37 @@ export class UsersService extends BaseService {
   }
 
   findOneByEmail(email: string) {
-    return this.prismaService.user.findUniqueOrThrow({ where: { email } });
+    return this.prismaService.user.findUnique({ where: { email } });
+  }
+
+  async changeOwnPassword(userId: string, newPassword: string) {
+    this.validateAbility('changePassword', 'user');
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_OR_ROUNDS);
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+  }
+
+  async setPasswordForRecovery(
+    userId: string,
+    data: {
+      password: string;
+      resetPasswordToken: string;
+      resetPasswordExpires: Date;
+    },
+  ) {
+    const hashedPassword = await bcrypt.hash(data.password, SALT_OR_ROUNDS);
+
+    await this.prismaService.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: data.resetPasswordToken,
+        resetPasswordExpires: data.resetPasswordExpires,
+      },
+    });
   }
 
   findByIdWithPassword(id: string) {

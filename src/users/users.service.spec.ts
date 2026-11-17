@@ -1,4 +1,6 @@
+import { ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service.js';
 import { PrismaService } from 'src/prisma.service.js';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
@@ -7,7 +9,10 @@ import { PessoaService } from 'src/pessoa/pessoa.service.js';
 describe('UsersService', () => {
   let service: UsersService;
   let prismaService: PrismaService;
-  let abilityService: CaslAbilityService;
+  let abilityServiceMock: {
+    ability: { can: ReturnType<typeof vi.fn> };
+    createForUser: ReturnType<typeof vi.fn>;
+  };
   let pessoaServiceMock: { findOne: ReturnType<typeof vi.fn>; findOneByCpf: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -15,11 +20,18 @@ describe('UsersService', () => {
       findOne: vi.fn(),
       findOneByCpf: vi.fn(),
     };
+    abilityServiceMock = {
+      ability: { can: vi.fn().mockReturnValue(true) },
+      createForUser: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        CaslAbilityService,
+        {
+          provide: CaslAbilityService,
+          useValue: abilityServiceMock,
+        },
         {
           provide: PessoaService,
           useValue: pessoaServiceMock,
@@ -30,6 +42,7 @@ describe('UsersService', () => {
             create: vi.fn(),
             user: {
               findUniqueOrThrow: vi.fn(),
+              update: vi.fn(),
             },
           },
         },
@@ -38,15 +51,12 @@ describe('UsersService', () => {
 
     service = await module.resolve<UsersService>(UsersService);
     prismaService = module.get(PrismaService);
-    abilityService = await module.resolve<CaslAbilityService>(
-      CaslAbilityService,
-    );
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
     expect(prismaService).toBeDefined();
-    expect(abilityService).toBeDefined();
+    expect(abilityServiceMock).toBeDefined();
   });
 
   describe('findOne', () => {
@@ -133,6 +143,92 @@ describe('UsersService', () => {
         password: 'hash-super-secreto',
         active: true,
       });
+    });
+  });
+
+  describe('changeOwnPassword', () => {
+    it('valida a permissão, hasheia e atualiza somente a senha do usuário autenticado', async () => {
+      vi.mocked(prismaService.user.update).mockResolvedValue({
+        id: 'user-1',
+      } as never);
+
+      await service.changeOwnPassword('user-1', 'nova-senha');
+
+      const chamada = vi.mocked(prismaService.user.update).mock.calls[0][0];
+
+      expect(abilityServiceMock.ability.can).toHaveBeenCalledWith(
+        'changePassword',
+        'user',
+      );
+      expect(chamada.where).toEqual({ id: 'user-1' });
+      expect(Object.keys(chamada.data)).toEqual(['password']);
+      expect(chamada.data.password).not.toBe('nova-senha');
+      expect(
+        await bcrypt.compare('nova-senha', String(chamada.data.password)),
+      ).toBe(true);
+    });
+  });
+
+  describe('setPasswordForRecovery', () => {
+    it('grava senha temporária hasheada e dados de recuperação sem exigir ability', async () => {
+      vi.mocked(prismaService.user.update).mockResolvedValue({
+        id: 'user-1',
+      } as never);
+      const resetPasswordExpires = new Date('2026-11-16T22:00:00Z');
+
+      await service.setPasswordForRecovery('user-1', {
+        password: 'senha-temporaria',
+        resetPasswordToken: 'token-hash',
+        resetPasswordExpires,
+      });
+
+      const chamada = vi.mocked(prismaService.user.update).mock.calls[0][0];
+
+      expect(abilityServiceMock.ability.can).not.toHaveBeenCalled();
+
+      expect(chamada.where).toEqual({ id: 'user-1' });
+      expect(Object.keys(chamada.data).sort()).toEqual([
+        'password',
+        'resetPasswordExpires',
+        'resetPasswordToken',
+      ]);
+      expect(chamada.data.password).not.toBe('senha-temporaria');
+      expect(
+        await bcrypt.compare('senha-temporaria', String(chamada.data.password)),
+      ).toBe(true);
+      expect(chamada.data.resetPasswordToken).toBe('token-hash');
+      expect(chamada.data.resetPasswordExpires).toBe(resetPasswordExpires);
+    });
+  });
+
+  describe('update', () => {
+    it('mantém a exigência de update user e hasheia a senha no caminho administrativo', async () => {
+      vi.mocked(prismaService.user.update).mockResolvedValue({
+        id: 'user-1',
+      } as never);
+
+      await service.update('user-1', { password: 'senha-admin' });
+
+      const chamada = vi.mocked(prismaService.user.update).mock.calls[0][0];
+
+      expect(abilityServiceMock.ability.can).toHaveBeenCalledWith(
+        'update',
+        'user',
+      );
+      expect(chamada.where).toEqual({ id: 'user-1' });
+      expect(chamada.data.password).not.toBe('senha-admin');
+      expect(
+        await bcrypt.compare('senha-admin', String(chamada.data.password)),
+      ).toBe(true);
+    });
+
+    it('rejeita a atualização administrativa para quem não tem update user', async () => {
+      abilityServiceMock.ability.can.mockReturnValue(false);
+
+      await expect(
+        service.update('user-1', { password: 'nova-senha' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prismaService.user.update).not.toHaveBeenCalled();
     });
   });
 });
