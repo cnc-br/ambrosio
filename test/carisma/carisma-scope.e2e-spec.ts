@@ -233,4 +233,79 @@ describe('CarismaScope (e2e)', () => {
     expect(response.status).toBe(404);
     expect(response.body.statusCode).toBe(404);
   });
+
+  describe('auditoria de usuário', () => {
+    let adminUserId: string;
+
+    beforeAll(async () => {
+      const admin = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@admin.com' },
+      });
+      adminUserId = admin.id;
+    });
+
+    it('POST /carismas (201) | registra o usuário autenticado e não expõe auditoria', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/carismas')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          descricao: `Carisma auditoria e2e ${Date.now()}`,
+          tipo: 'SERVICO',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const criado = await prisma.carisma.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criado.cadastradoPorId).toBe(adminUserId);
+      expect(criado.atualizadoPorId).toBe(adminUserId);
+    });
+
+    it('PATCH /carismas/:id (200) | registra o usuário autenticado em atualizadoPorId', async () => {
+      const criado = await request(app.getHttpServer())
+        .post('/carismas')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          descricao: `Carisma auditoria update e2e ${Date.now()}`,
+          tipo: 'SERVICO',
+        });
+
+      await prisma.carisma.update({
+        where: { id: criado.body.data.id },
+        data: { cadastradoPorId: null, atualizadoPorId: null },
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/carismas/${criado.body.data.id}`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ descricao: `Carisma atualizado e2e ${Date.now()}` });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const atualizado = await prisma.carisma.findUniqueOrThrow({
+        where: { id: criado.body.data.id },
+      });
+      expect(atualizado.atualizadoPorId).toBe(adminUserId);
+      expect(atualizado.cadastradoPorId).toBeNull();
+    });
+
+    it('POST /carismas/pessoa/:pessoaId (201) | registra o autor em pessoaCarisma', async () => {
+      const response = await request(app.getHttpServer())
+        .post(`/carismas/pessoa/${pessoaSemVinculo.id}`)
+        .set('Authorization', `Bearer ${tokenSecretaria1}`)
+        .send({ carismaIds: [carisma2Id] });
+
+      expect(response.status).toBe(201);
+
+      const vinculo = await prisma.pessoaCarisma.findFirstOrThrow({
+        where: { pessoaId: pessoaSemVinculo.id, carismaId: carisma2Id },
+      });
+      expect(vinculo.cadastradoPorId).toBe(secretaria1UserId);
+      expect(vinculo.atualizadoPorId).toBe(secretaria1UserId);
+    });
+  });
 });

@@ -29,7 +29,10 @@ export class DioceseService extends BaseService {
     super(abilityService);
   }
 
-  async create(createDioceseDto: CreateDioceseDto): Promise<Diocese> {
+  async create(
+    createDioceseDto: CreateDioceseDto,
+    userId?: string,
+  ): Promise<Diocese> {
     this.validateCreateAbility('diocese');
     await this.tipoDioceseService.findOne(createDioceseDto.tipoDiocese.id);
 
@@ -41,6 +44,7 @@ export class DioceseService extends BaseService {
             observacao: `End. de ${createDioceseDto.tipoDiocese.descricao} ${createDioceseDto.descricao}. ${createDioceseDto.observacao || ''}`,
           },
           transaction,
+          userId,
         );
 
         return await transaction.diocese.create({
@@ -48,6 +52,8 @@ export class DioceseService extends BaseService {
             descricao: createDioceseDto.descricao,
             tipoDioceseId: createDioceseDto.tipoDiocese.id,
             enderecoId: endereco.id,
+            cadastradoPorId: userId ?? null,
+            atualizadoPorId: userId ?? null,
           },
           select: DIOCESE_SELECT,
         });
@@ -88,6 +94,7 @@ export class DioceseService extends BaseService {
   async update(
     id: number,
     updateDioceseDto: UpdateDioceseDto,
+    userId?: string,
   ): Promise<Diocese> {
     this.validateUpdateAbility('diocese');
 
@@ -110,6 +117,7 @@ export class DioceseService extends BaseService {
           updateDioceseDto.endereco.id,
           updateDioceseDto.endereco,
           transaction,
+          userId,
         );
 
         return await transaction.diocese.update({
@@ -117,6 +125,7 @@ export class DioceseService extends BaseService {
             descricao: updateDioceseDto.descricao,
             tipoDioceseId,
             enderecoId: endereco.id,
+            ...(userId ? { atualizadoPorId: userId } : {}),
           },
           include: {
             endereco: ENDERECO_INCLUDE,

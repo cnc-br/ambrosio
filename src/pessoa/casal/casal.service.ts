@@ -26,7 +26,7 @@ export class CasalService extends BaseService {
     super(abilityService);
   }
 
-  async createCasal(createCasalDto: CreateCasalDto) {
+  async createCasal(createCasalDto: CreateCasalDto, userId?: string) {
     this.validateCreateAbility('pessoa');
     const pessoaId = createCasalDto.pessoaId;
     const conjugueId = createCasalDto.conjugueId;
@@ -75,6 +75,8 @@ export class CasalService extends BaseService {
     const casal = await this.pessoaCasalRepository.create({
       pessoaMaridoId,
       pessoaMulherId,
+      cadastradoPorId: userId ?? null,
+      atualizadoPorId: userId ?? null,
     });
 
     await this.juntarCasalNaMesmaComunidade(conjugue.id, pessoa.id);

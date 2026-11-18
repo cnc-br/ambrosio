@@ -14,6 +14,7 @@ import { UpdateDioceseDto } from './dto/update-diocese.dto.js';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @UseGuards(AuthGuard, RoleGuard)
 @ApiTags('Diocese')
@@ -22,8 +23,11 @@ export class DioceseController {
   constructor(private readonly dioceseService: DioceseService) {}
 
   @Post()
-  create(@Body() createDioceseDto: CreateDioceseDto) {
-    return this.dioceseService.create(createDioceseDto);
+  create(
+    @Body() createDioceseDto: CreateDioceseDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.dioceseService.create(createDioceseDto, userId);
   }
 
   @Get()
@@ -37,8 +41,12 @@ export class DioceseController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDioceseDto: UpdateDioceseDto) {
-    return this.dioceseService.update(+id, updateDioceseDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateDioceseDto: UpdateDioceseDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.dioceseService.update(+id, updateDioceseDto, userId);
   }
 
   @Delete(':id')

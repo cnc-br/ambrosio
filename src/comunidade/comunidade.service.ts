@@ -28,7 +28,7 @@ export class ComunidadeService extends BaseService {
     super(abilityService);
   }
 
-  async create(createComunidadeDto: CreateComunidadeDto) {
+  async create(createComunidadeDto: CreateComunidadeDto, userId?: string) {
     this.validateCreateAbility('comunidade');
 
     // Projeção única do escopo de paróquia do perfil (paróquias do usuário ou
@@ -60,6 +60,8 @@ export class ComunidadeService extends BaseService {
         quantidadeMembros: createComunidadeDto.quantidadeMembros,
         paroquiaId: paroquia.id,
         observacao: createComunidadeDto.observacao,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
 
@@ -68,7 +70,7 @@ export class ComunidadeService extends BaseService {
         comunidadeId: comunidade.id,
         numeroComunidade: comunidade.numeroDaComunidade,
         descricao: `Comunidade ${comunidade.numeroDaComunidade} cadastrada no sistema.`,
-      });
+      }, userId);
     } catch (error) {
       await this.remove(comunidade.id);
       this.logger.error(
@@ -235,7 +237,11 @@ export class ComunidadeService extends BaseService {
     return mapa;
   }
 
-  async update(id: number, updateComunidadeDto: UpdateComunidadeDto) {
+  async update(
+    id: number,
+    updateComunidadeDto: UpdateComunidadeDto,
+    userId?: string,
+  ) {
     this.validateUpdateAbility('comunidade');
 
     await this.validarComunidadeDentroDoEscopoDeAtualizacao(id);
@@ -244,7 +250,7 @@ export class ComunidadeService extends BaseService {
       comunidadeId: id,
       numeroComunidade: updateComunidadeDto.numeroDaComunidade,
       descricao: `Comunidade com ${updateComunidadeDto.quantidadeMembros} membros.`,
-    });
+    }, userId);
 
     return this.prisma.comunidade.update({
       where: { id },
@@ -253,6 +259,7 @@ export class ComunidadeService extends BaseService {
         quantidadeMembros: updateComunidadeDto.quantidadeMembros,
         observacao: updateComunidadeDto.observacao,
         etapaAtualId: updateComunidadeDto.etapaAtualId,
+        ...(userId ? { atualizadoPorId: userId } : {}),
       },
     });
   }
@@ -265,7 +272,11 @@ export class ComunidadeService extends BaseService {
     });
   }
 
-  async adicionarPessoa(comunidadeId: number, pessoaId: number) {
+  async adicionarPessoa(
+    comunidadeId: number,
+    pessoaId: number,
+    userId?: string,
+  ) {
     this.validateUpdateAbility('comunidade');
     await this.validarComunidadeDentroDoEscopoDeAtualizacao(comunidadeId);
     await this.validarPessoaDentroDoEscopoDeAtualizacao(pessoaId);
@@ -274,6 +285,8 @@ export class ComunidadeService extends BaseService {
         dataEntrada: new Date(),
         comunidadeId,
         pessoaId,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }

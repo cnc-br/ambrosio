@@ -429,4 +429,149 @@ describe('ComunidadeController (e2e)', () => {
         expect(res.body.statusCode).toBe(403);
       });
   });
+
+  describe('auditoria de usuário', () => {
+    let secretariaUserId = '';
+    let adminUserId = '';
+
+    beforeAll(async () => {
+      const secretaria = await prisma.user.findUniqueOrThrow({
+        where: { email: 'secretaria@admin.com' },
+      });
+      secretariaUserId = secretaria.id;
+      const admin = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@admin.com' },
+      });
+      adminUserId = admin.id;
+    });
+
+    it(`/${principal} (POST) - 201 | registra o usuário autenticado e não expõe auditoria`, async () => {
+      const numerosUsados = await prisma.comunidade.findMany({
+        where: { paroquiaId: paroquiaDoUsuario },
+        select: { numeroDaComunidade: true },
+      });
+      const numeroLivre = Array.from({ length: 60 }, (_, i) => i + 1).find(
+        (n) => !numerosUsados.some((c) => c.numeroDaComunidade === n),
+      );
+
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send({
+          numeroDaComunidade: numeroLivre,
+          quantidadeMembros: 10,
+          paroquiaId: paroquiaDoUsuario,
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const criada = await prisma.comunidade.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criada.cadastradoPorId).toBe(secretariaUserId);
+      expect(criada.atualizadoPorId).toBe(secretariaUserId);
+    });
+
+    it(`/${principal}/:id (PATCH) - 200 | registra o usuário autenticado em atualizadoPorId`, async () => {
+      const comunidade = await prisma.comunidade.findFirstOrThrow({
+        where: { paroquiaId: paroquiaDoUsuario },
+      });
+      await prisma.comunidade.update({
+        where: { id: comunidade.id },
+        data: { cadastradoPorId: null, atualizadoPorId: null },
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/${principal}/${comunidade.id}`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ quantidadeMembros: 42 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const atualizada = await prisma.comunidade.findUniqueOrThrow({
+        where: { id: comunidade.id },
+      });
+      expect(atualizada.atualizadoPorId).toBe(adminUserId);
+    });
+
+    it(`/${principal}/:id/pessoa/:pessoaId (POST) - 201 | registra o autor no vínculo comunidadePessoa`, async () => {
+      const comunidade = await prisma.comunidade.findFirstOrThrow({
+        where: { paroquiaId: paroquiaDoUsuario },
+      });
+      const vinculadas = await prisma.comunidadePessoa.findMany({
+        where: { comunidadeId: comunidade.id },
+        select: { pessoaId: true },
+      });
+      const pessoa = await prisma.pessoa.findFirstOrThrow({
+        where: { id: { notIn: vinculadas.map((v) => v.pessoaId) } },
+        select: { id: true },
+      });
+
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}/${comunidade.id}/pessoa/${pessoa.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`);
+
+      expect(response.status).toBe(201);
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+
+      const vinculo = await prisma.comunidadePessoa.findFirstOrThrow({
+        where: { comunidadeId: comunidade.id, pessoaId: pessoa.id },
+      });
+      expect(vinculo.cadastradoPorId).toBe(secretariaUserId);
+      expect(vinculo.atualizadoPorId).toBe(secretariaUserId);
+
+      await prisma.comunidadePessoa.delete({
+        where: {
+          comunidadeId_pessoaId: {
+            comunidadeId: comunidade.id,
+            pessoaId: pessoa.id,
+          },
+        },
+      });
+    });
+
+    it(`/${principal}/:id/etapa (POST e PATCH) - 201/200 | registra a auditoria em comunidadeEtapa`, async () => {
+      const comunidade = await prisma.comunidade.findFirstOrThrow({
+        where: { paroquiaId: paroquiaDoUsuario },
+      });
+      const etapa = await prisma.etapa.findFirstOrThrow();
+
+      const criada = await request(app.getHttpServer())
+        .post(`/${principal}/${comunidade.id}/etapa`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send({ etapaId: etapa.id });
+
+      expect(criada.status).toBe(201);
+      expect(criada.body.data).not.toHaveProperty('cadastradoPorId');
+
+      const etapaCriada = await prisma.comunidadeEtapa.findUniqueOrThrow({
+        where: { id: criada.body.data.id },
+      });
+      expect(etapaCriada.cadastradoPorId).toBe(secretariaUserId);
+      expect(etapaCriada.atualizadoPorId).toBe(secretariaUserId);
+
+      await prisma.comunidadeEtapa.update({
+        where: { id: etapaCriada.id },
+        data: { atualizadoPorId: null },
+      });
+
+      const atualizada = await request(app.getHttpServer())
+        .patch(`/${principal}/${comunidade.id}/etapa/${etapaCriada.id}`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ etapaId: etapa.id, observacao: 'Atualizada no e2e' });
+
+      expect(atualizada.status).toBe(200);
+      expect(atualizada.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const etapaAtualizada = await prisma.comunidadeEtapa.findUniqueOrThrow({
+        where: { id: etapaCriada.id },
+      });
+      expect(etapaAtualizada.atualizadoPorId).toBe(adminUserId);
+
+      await prisma.comunidadeEtapa.delete({ where: { id: etapaCriada.id } });
+    });
+  });
 });

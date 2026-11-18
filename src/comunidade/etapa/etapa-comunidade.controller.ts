@@ -16,6 +16,7 @@ import { UpdateEtapaDto } from './dto/update-etapa.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @ApiTags('Etapa da Comunidade')
 @UseGuards(AuthGuard, RoleGuard)
@@ -33,8 +34,9 @@ export class EtapaComunidadeController {
     )
     comunidadeId: number,
     @Body() createEtapaDto: CreateEtapaDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.etapaService.create(comunidadeId, createEtapaDto);
+    return this.etapaService.create(comunidadeId, createEtapaDto, userId);
   }
 
   @Get()
@@ -80,8 +82,9 @@ export class EtapaComunidadeController {
     )
     id: number,
     @Body() updateEtapaDto: UpdateEtapaDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.etapaService.update(id, updateEtapaDto);
+    return this.etapaService.update(id, updateEtapaDto, userId);
   }
 
   @Delete(':id')

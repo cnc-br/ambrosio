@@ -270,4 +270,57 @@ describe('AvisosController (e2e)', () => {
         expect(res.body.statusCode).toBe(404);
       });
   });
+
+  describe('auditoria de usuário', () => {
+    let adminUserId = '';
+
+    beforeAll(async () => {
+      const admin = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@admin.com' },
+      });
+      adminUserId = admin.id;
+    });
+
+    it(`/avisos (POST) - 201 | registra o usuário autenticado e não expõe auditoria`, async () => {
+      const response = await request(app.getHttpServer())
+        .post('/avisos')
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({
+          texto: 'Aviso com auditoria',
+          dataFim: '2026-12-31T23:59:59.000Z',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const criado = await prisma.aviso.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criado.cadastradoPorId).toBe(adminUserId);
+      expect(criado.atualizadoPorId).toBe(adminUserId);
+    });
+
+    it(`/avisos/:id (PATCH) - 200 | registra o usuário autenticado em atualizadoPorId`, async () => {
+      const aviso = await prisma.aviso.create({
+        data: {
+          texto: 'Aviso a atualizar',
+          dataFim: new Date('2026-12-31T23:59:59.000Z'),
+        },
+      });
+
+      const response = await request(app.getHttpServer())
+        .patch(`/avisos/${aviso.id}`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ texto: 'Aviso atualizado' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const atualizado = await prisma.aviso.findUniqueOrThrow({
+        where: { id: aviso.id },
+      });
+      expect(atualizado.atualizadoPorId).toBe(adminUserId);
+    });
+  });
 });

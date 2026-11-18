@@ -43,4 +43,35 @@ describe('LocalidadeService', () => {
     expect(prismaService).toBeDefined();
     expect(enderecoService).toBeDefined();
   });
+
+  it('create grava a autoria e repassa o usuário ao endereço', async () => {
+    const create = vi.fn().mockResolvedValue({ id: 1 });
+    const enderecoCreate = vi.fn().mockResolvedValue({ id: 9 });
+    const modulo = new LocalidadeService(
+      { localidade: { create } } as never,
+      { create: enderecoCreate } as never,
+    );
+
+    await modulo.create(
+      {
+        descricao: 'Localidade Nova',
+        diocese: { id: 1 },
+        tipoLocalidade: { id: 2 },
+        endereco: { cep: '13208200' },
+      } as never,
+      'usuario-autor',
+    );
+
+    expect(enderecoCreate).toHaveBeenCalledWith(
+      expect.anything(),
+      undefined,
+      'usuario-autor',
+    );
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        cadastradoPorId: 'usuario-autor',
+        atualizadoPorId: 'usuario-autor',
+      }),
+    });
+  });
 });

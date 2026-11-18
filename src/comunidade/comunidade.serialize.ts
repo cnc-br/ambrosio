@@ -183,7 +183,6 @@ function montarPessoaDoCarisma(
  * A pessoa pode ser marido em `casamentosComoMarido` ou mulher em
  * `casamentosComoMulher`.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function resolverCasal(
   pessoa: any,
 ): { marido: any; mulher: any } | null {

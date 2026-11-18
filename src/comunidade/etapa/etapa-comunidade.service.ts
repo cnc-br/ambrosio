@@ -17,7 +17,11 @@ export class EtapaComunidadeService extends BaseService {
     super(abilityService);
   }
 
-  async create(comunidadeId: number, createEtapaDto: CreateEtapaDto) {
+  async create(
+    comunidadeId: number,
+    createEtapaDto: CreateEtapaDto,
+    userId?: string,
+  ) {
     this.validateCreateAbility('etapa');
     this.logger.log(`Creating etapa for comunidade ${comunidadeId}`);
 
@@ -29,13 +33,19 @@ export class EtapaComunidadeService extends BaseService {
         dataInicio: createEtapaDto.dataInicio,
         observacao: createEtapaDto.observacao,
         localConvivencia: createEtapaDto.localConvivencia,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
 
     // Atualiza a etapaAtualId da comunidade para a etapa recém-criada
-    await this.comunidadeService.update(etapa.comunidadeId, {
-      etapaAtualId: etapa.etapaId,
-    });
+    await this.comunidadeService.update(
+      etapa.comunidadeId,
+      {
+        etapaAtualId: etapa.etapaId,
+      },
+      userId,
+    );
 
     return etapa;
   }
@@ -62,7 +72,7 @@ export class EtapaComunidadeService extends BaseService {
     });
   }
 
-  async update(id: number, dto: UpdateEtapaDto) {
+  async update(id: number, dto: UpdateEtapaDto, userId?: string) {
     this.validateUpdateAbility('etapa');
 
     return this.prisma.comunidadeEtapa.update({
@@ -73,6 +83,7 @@ export class EtapaComunidadeService extends BaseService {
         localConvivencia: dto.localConvivencia,
         dataInicio: dto.dataInicio,
         observacao: dto.observacao,
+        ...(userId ? { atualizadoPorId: userId } : {}),
       },
     });
   }

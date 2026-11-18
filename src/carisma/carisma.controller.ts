@@ -21,6 +21,7 @@ import {
 import { CreateCarismaDaPessoaDto } from './dto/create-carisma-da-pessoa.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @ApiTags('Carisma')
 @UseGuards(AuthGuard, RoleGuard)
@@ -30,8 +31,11 @@ export class CarismaController {
 
   @Post()
   @ApiCreatedResponse({ description: 'Carisma criado com sucesso.' })
-  create(@Body() createCarismaDto: CreateCarismaDto) {
-    return this.carismaService.create(createCarismaDto);
+  create(
+    @Body() createCarismaDto: CreateCarismaDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.carismaService.create(createCarismaDto, userId);
   }
 
   @Post('pessoa/:pessoaId')
@@ -47,8 +51,13 @@ export class CarismaController {
   addCarismaToPessoa(
     @Param('pessoaId') pessoaId: string,
     @Body() createCarismaDto: CreateCarismaDaPessoaDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.carismaService.addCarismaToPessoa(+pessoaId, createCarismaDto);
+    return this.carismaService.addCarismaToPessoa(
+      +pessoaId,
+      createCarismaDto,
+      userId,
+    );
   }
 
   @Get('equipe')
@@ -71,8 +80,12 @@ export class CarismaController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCarismaDto: UpdateCarismaDto) {
-    return this.carismaService.update(+id, updateCarismaDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateCarismaDto: UpdateCarismaDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.carismaService.update(+id, updateCarismaDto, userId);
   }
 
   @Delete(':id')

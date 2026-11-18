@@ -53,7 +53,7 @@ export class PessoaService extends BaseService {
     );
 
     if (comunidadeId !== undefined) {
-      await this.vincularPessoaNaComunidade(comunidadeId, pessoa.id);
+      await this.vincularPessoaNaComunidade(comunidadeId, pessoa.id, userId);
     }
 
     return pessoa;
@@ -163,9 +163,14 @@ export class PessoaService extends BaseService {
   private async vincularPessoaNaComunidade(
     comunidadeId: number,
     pessoaId: number,
+    userId?: string,
   ) {
     try {
-      await this.comunidadeService.adicionarPessoa(comunidadeId, pessoaId);
+      await this.comunidadeService.adicionarPessoa(
+        comunidadeId,
+        pessoaId,
+        userId,
+      );
     } catch (error) {
       this.logger.error(
         `Falha ao vincular pessoa ${pessoaId} na comunidade ${comunidadeId}. Desfazendo cadastro da pessoa.`,

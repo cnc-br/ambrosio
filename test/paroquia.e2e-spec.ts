@@ -858,4 +858,84 @@ describe('ParoquiaController (e2e)', () => {
         });
     });
   });
+
+  describe('auditoria de usuário', () => {
+    let adminUserId = '';
+
+    const payloadParoquia = () => ({
+      descricao: `Paroquia auditoria ${Date.now()}`,
+      diocese: { id: 1 },
+      setor: { id: 1 },
+      endereco: {
+        cep: '13208200',
+        logradouro: 'Praça Governador Pedro de Toledo',
+        numero: 's/n',
+        bairro: 'Centro',
+        UF: 'SP',
+        cidade: 'Judiaí',
+      },
+    });
+
+    beforeAll(async () => {
+      const admin = await prisma.user.findUniqueOrThrow({
+        where: { email: 'admin@admin.com' },
+      });
+      adminUserId = admin.id;
+    });
+
+    it(`/${principal} (POST) - 201 | registra o usuário autenticado na paróquia e no endereço`, async () => {
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(payloadParoquia())
+        .expect(201);
+
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+
+      const criada = await prisma.paroquia.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criada.cadastradoPorId).toBe(adminUserId);
+      expect(criada.atualizadoPorId).toBe(adminUserId);
+
+      const endereco = await prisma.endereco.findUniqueOrThrow({
+        where: { id: response.body.data.endereco.id },
+      });
+      expect(endereco.cadastradoPorId).toBe(adminUserId);
+      expect(endereco.atualizadoPorId).toBe(adminUserId);
+    });
+
+    it(`/${principal}/:id (PATCH) - 200 | registra o usuário autenticado em atualizadoPorId`, async () => {
+      const criada = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(payloadParoquia())
+        .expect(201);
+
+      await prisma.paroquia.update({
+        where: { id: criada.body.data.id },
+        data: { cadastradoPorId: null, atualizadoPorId: null },
+      });
+
+      const payload = payloadParoquia();
+      const response = await request(app.getHttpServer())
+        .patch(`/${principal}/${criada.body.data.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          ...payload,
+          endereco: {
+            ...payload.endereco,
+            id: criada.body.data.endereco.id,
+          },
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+      const atualizada = await prisma.paroquia.findUniqueOrThrow({
+        where: { id: criada.body.data.id },
+      });
+      expect(atualizada.atualizadoPorId).toBe(adminUserId);
+    });
+  });
 });

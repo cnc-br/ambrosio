@@ -7,11 +7,13 @@ import { UpdateAvisoDto } from './dto/update-aviso.dto.js';
 export class AvisosService {
   constructor(private prisma: PrismaService) {}
 
-  create(createAvisoDto: CreateAvisoDto) {
+  create(createAvisoDto: CreateAvisoDto, userId?: string) {
     return this.prisma.aviso.create({
       data: {
         texto: createAvisoDto.texto,
         dataFim: createAvisoDto.dataFim,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }
@@ -28,14 +30,17 @@ export class AvisosService {
     });
   }
 
-  update(id: number, updateAvisoDto: UpdateAvisoDto) {
+  update(id: number, updateAvisoDto: UpdateAvisoDto, userId?: string) {
     // Defesa em profundidade: o DTO já valida/rejeita null, mas o service
     // nunca deve repassar null a campos não anuláveis do Prisma (vira 500).
     const data = this.toUpdateData(updateAvisoDto);
 
     return this.prisma.aviso.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        ...(userId ? { atualizadoPorId: userId } : {}),
+      },
     });
   }
 

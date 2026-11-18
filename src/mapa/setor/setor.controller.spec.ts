@@ -35,8 +35,26 @@ describe('SetorController', () => {
 
   it('should return all setores', async () => {
     const setores = [
-      { id: 1, descricao: 'Setor 1', ativo: true, regiaoId: 1 },
-      { id: 2, descricao: 'Setor 2', ativo: false, regiaoId: 2 },
+      {
+        id: 1,
+        descricao: 'Setor 1',
+        ativo: true,
+        regiaoId: 1,
+        cadastradoPorId: null,
+        atualizadoPorId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 2,
+        descricao: 'Setor 2',
+        ativo: false,
+        regiaoId: 2,
+        cadastradoPorId: null,
+        atualizadoPorId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
     vi.spyOn(prisma.setor, 'findMany').mockResolvedValue(setores);
 
@@ -49,6 +67,10 @@ describe('SetorController', () => {
       descricao: 'Setor 1',
       ativo: true,
       regiaoId: 1,
+      cadastradoPorId: null,
+      atualizadoPorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     vi.spyOn(prisma.setor, 'findUniqueOrThrow').mockResolvedValue(setor);
 

@@ -489,6 +489,17 @@ describe('PessoaUpdateScope (e2e)', () => {
     expect(response.status).toBe(201);
     expect(response.body.data).toHaveProperty('pessoaMaridoId');
     expect(response.body.data).toHaveProperty('pessoaMulherId');
+    expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+    expect(response.body.data).not.toHaveProperty('atualizadoPorId');
+
+    const casal = await prisma.pessoaCasal.findFirstOrThrow({
+      where: {
+        pessoaMaridoId: response.body.data.pessoaMaridoId,
+        pessoaMulherId: response.body.data.pessoaMulherId,
+      },
+    });
+    expect(casal.cadastradoPorId).toBe(secretaria1UserId);
+    expect(casal.atualizadoPorId).toBe(secretaria1UserId);
   });
 
   it(`${principal}/casal (POST) - SECRETARIA_PAROQUIA não cria casal com uma pessoa fora do escopo`, async () => {

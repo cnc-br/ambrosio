@@ -21,6 +21,7 @@ export class EnderecoService {
   async createByPessoaId(
     createEnderecoDto: CreateEnderecoDto,
     pessoaId: number,
+    userId?: string,
   ) {
     const pessoa = await this.prisma.pessoa.findFirstOrThrow({
       where: { id: pessoaId },
@@ -28,11 +29,13 @@ export class EnderecoService {
 
     createEnderecoDto.observacao = `End. pessoa id: ${pessoa.id} (${pessoa.externalId}). ${createEnderecoDto.observacao ?? ''}`;
 
-    const endereco = await this.create(createEnderecoDto);
+    const endereco = await this.create(createEnderecoDto, undefined, userId);
     await this.prisma.pessoaEndereco.create({
       data: {
         pessoaId: pessoa.id,
         enderecoId: endereco.id,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
 
@@ -43,23 +46,33 @@ export class EnderecoService {
   async create(
     createEnderecoDto: CreateEnderecoDto,
     transaction?: Prisma.TransactionClient,
+    userId?: string,
   ) {
     const prismaClient = transaction || this.prisma;
 
-    const pais = await this.paisService.create({
-      nome: createEnderecoDto.pais || 'Brasil',
-    });
+    const pais = await this.paisService.create(
+      {
+        nome: createEnderecoDto.pais || 'Brasil',
+      },
+      userId,
+    );
 
-    const estado = await this.estadoService.createOrSelect({
-      nome: createEnderecoDto.UF,
-      sigla: createEnderecoDto.UF,
-      pais: { id: pais.id, nome: pais.nome },
-    });
+    const estado = await this.estadoService.createOrSelect(
+      {
+        nome: createEnderecoDto.UF,
+        sigla: createEnderecoDto.UF,
+        pais: { id: pais.id, nome: pais.nome },
+      },
+      userId,
+    );
 
-    const cidade = await this.cidadeService.createOrSelect({
-      nome: createEnderecoDto.cidade,
-      estado: { sigla: estado.sigla },
-    });
+    const cidade = await this.cidadeService.createOrSelect(
+      {
+        nome: createEnderecoDto.cidade,
+        estado: { sigla: estado.sigla },
+      },
+      userId,
+    );
 
     this.logger.log(
       `Cadastrando endereco: ${createEnderecoDto.logradouro}, CEP: ${createEnderecoDto.cep}, cidade: ${cidade.nome} - ${estado.sigla}`,
@@ -72,6 +85,8 @@ export class EnderecoService {
         bairro: createEnderecoDto.bairro,
         observacao: createEnderecoDto.observacao,
         cidadeId: cidade.id,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }
@@ -103,23 +118,33 @@ export class EnderecoService {
     id: number,
     updateEnderecoDto: UpdateEnderecoDto,
     transaction?: Prisma.TransactionClient,
+    userId?: string,
   ) {
     const prismaClient = transaction || this.prisma;
 
-    const pais = await this.paisService.create({
-      nome: updateEnderecoDto.pais || 'Brasil',
-    });
+    const pais = await this.paisService.create(
+      {
+        nome: updateEnderecoDto.pais || 'Brasil',
+      },
+      userId,
+    );
 
-    const estado = await this.estadoService.createOrSelect({
-      nome: updateEnderecoDto.UF,
-      sigla: updateEnderecoDto.UF,
-      pais: { id: pais.id, nome: pais.nome },
-    });
+    const estado = await this.estadoService.createOrSelect(
+      {
+        nome: updateEnderecoDto.UF,
+        sigla: updateEnderecoDto.UF,
+        pais: { id: pais.id, nome: pais.nome },
+      },
+      userId,
+    );
 
-    const cidade = await this.cidadeService.createOrSelect({
-      nome: updateEnderecoDto.cidade,
-      estado: { sigla: estado.sigla },
-    });
+    const cidade = await this.cidadeService.createOrSelect(
+      {
+        nome: updateEnderecoDto.cidade,
+        estado: { sigla: estado.sigla },
+      },
+      userId,
+    );
 
     return await prismaClient.endereco.update({
       data: {
@@ -129,6 +154,7 @@ export class EnderecoService {
         bairro: updateEnderecoDto.bairro,
         observacao: updateEnderecoDto.observacao,
         cidadeId: cidade.id,
+        ...(userId ? { atualizadoPorId: userId } : {}),
       },
       where: {
         id,

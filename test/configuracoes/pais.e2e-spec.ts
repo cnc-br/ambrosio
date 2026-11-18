@@ -1,13 +1,27 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { setupTestModule } from '../test-setup.js';
+import { PrismaService } from 'src/prisma.service.js';
 
 describe('PaisController (e2e)', () => {
   let app: INestApplication;
+  let prisma: PrismaService;
   const principal = 'pais';
+  let tokenAdmin = '';
+  let adminUserId = '';
 
   beforeAll(async () => {
     app = await setupTestModule();
+    prisma = app.get(PrismaService);
+
+    const admin = await prisma.user.findUniqueOrThrow({
+      where: { email: 'admin@admin.com' },
+    });
+    adminUserId = admin.id;
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'admin@admin.com', password: 'admin' });
+    tokenAdmin = login.body.data.access_token;
   });
 
   afterAll(async () => {
@@ -107,5 +121,42 @@ describe('PaisController (e2e)', () => {
         expect(res.body.message[0]).toBe('nome must be shorter than or equal to 100 characters');
         expect(res.body.statusCode).toBe(400);
       });
+  });
+
+  describe('auditoria de usuário', () => {
+    it(`/${principal} (POST) - 201 | sem token grava auditoria nula`, async () => {
+      const nome = `Pais sem token ${Date.now()}`;
+
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .send({ nome });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+
+      const criado = await prisma.pais.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criado.cadastradoPorId).toBeNull();
+      expect(criado.atualizadoPorId).toBeNull();
+    });
+
+    it(`/${principal} (POST) - 201 | com token grava o usuário autenticado`, async () => {
+      const nome = `Pais com token ${Date.now()}`;
+
+      const response = await request(app.getHttpServer())
+        .post(`/${principal}`)
+        .set('Authorization', `Bearer ${tokenAdmin}`)
+        .send({ nome });
+
+      expect(response.status).toBe(201);
+      expect(response.body.data).not.toHaveProperty('cadastradoPorId');
+
+      const criado = await prisma.pais.findUniqueOrThrow({
+        where: { id: response.body.data.id },
+      });
+      expect(criado.cadastradoPorId).toBe(adminUserId);
+      expect(criado.atualizadoPorId).toBe(adminUserId);
+    });
   });
 });

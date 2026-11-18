@@ -12,7 +12,7 @@ export class EstadoService {
     private paisService: PaisService,
   ) {}
 
-  async createOrSelect(createEstadoDto: CreateEstadoDto) {
+  async createOrSelect(createEstadoDto: CreateEstadoDto, userId?: string) {
     const uf = await this.prisma.estado.findFirst({
       where: {
         sigla: createEstadoDto.sigla,
@@ -36,6 +36,8 @@ export class EstadoService {
         nome: createEstadoDto.nome,
         sigla: createEstadoDto.sigla,
         paisId: pais.id,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }

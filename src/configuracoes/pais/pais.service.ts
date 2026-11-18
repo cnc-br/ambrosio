@@ -16,11 +16,13 @@ export class PaisService {
     private readonly httpService: HttpService,
   ) { }
 
-  async create(createPaisDto: CreatePaisDto) {
+  async create(createPaisDto: CreatePaisDto, userId?: string) {
     try {
       return await this.prisma.pais.create({
         data: {
           nome: createPaisDto.nome,
+          cadastradoPorId: userId ?? null,
+          atualizadoPorId: userId ?? null,
         },
       });
     } catch (error) {

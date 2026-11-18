@@ -130,4 +130,93 @@ describe('CarismaService', () => {
       ).not.toHaveBeenCalled();
     });
   });
+
+  describe('auditoria', () => {
+    let service: CarismaService;
+    let prisma: {
+      carisma: {
+        create: ReturnType<typeof vi.fn>;
+        update: ReturnType<typeof vi.fn>;
+        findMany: ReturnType<typeof vi.fn>;
+      };
+      pessoaCarisma: {
+        findMany: ReturnType<typeof vi.fn>;
+        createMany: ReturnType<typeof vi.fn>;
+        deleteMany: ReturnType<typeof vi.fn>;
+      };
+    };
+
+    beforeEach(() => {
+      prisma = {
+        carisma: {
+          create: vi.fn().mockResolvedValue({ id: 1 }),
+          update: vi.fn().mockResolvedValue({ id: 1 }),
+          findMany: vi.fn(),
+        },
+        pessoaCarisma: {
+          findMany: vi.fn(),
+          createMany: vi.fn(),
+          deleteMany: vi.fn(),
+        },
+      };
+      service = new CarismaService(
+        prisma as never,
+        {
+          validarPessoaDentroDoEscopoDeAtualizacao: vi.fn(),
+        } as never,
+        { ability: { can: vi.fn(() => true) } } as never,
+      );
+    });
+
+    it('create grava cadastradoPorId e atualizadoPorId do usuário autenticado', async () => {
+      await service.create({ descricao: 'Catequista', tipo: 'SERVICO' } as never, 'usuario-autor');
+
+      expect(prisma.carisma.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          cadastradoPorId: 'usuario-autor',
+          atualizadoPorId: 'usuario-autor',
+        }),
+      });
+    });
+
+    it('create sem usuário grava auditoria nula', async () => {
+      await service.create({ descricao: 'Catequista', tipo: 'SERVICO' } as never);
+
+      expect(prisma.carisma.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          cadastradoPorId: null,
+          atualizadoPorId: null,
+        }),
+      });
+    });
+
+    it('update grava atualizadoPorId do usuário autenticado', async () => {
+      await service.update(1, { descricao: 'Catequista' } as never, 'usuario-editor');
+
+      expect(prisma.carisma.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({ atualizadoPorId: 'usuario-editor' }),
+      });
+    });
+
+    it('addCarismaToPessoa grava autoria em pessoaCarisma', async () => {
+      prisma.carisma.findMany.mockResolvedValue([{ id: 10 }]);
+      prisma.pessoaCarisma.findMany.mockResolvedValue([]);
+      prisma.pessoaCarisma.createMany.mockResolvedValue({ count: 1 });
+
+      await service.addCarismaToPessoa(1, { carismaIds: [10] }, 'usuario-autor');
+
+      expect(prisma.pessoaCarisma.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            pessoaId: 1,
+            carismaId: 10,
+            cadastradoPorId: 'usuario-autor',
+            atualizadoPorId: 'usuario-autor',
+          }),
+        ],
+        skipDuplicates: true,
+      });
+    });
+  });
 });

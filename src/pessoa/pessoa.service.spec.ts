@@ -604,7 +604,11 @@ describe('PessoaService', () => {
       cadastradoPorId: autorId,
       atualizadoPorId: autorId,
     });
-    expect(comunidadeServiceMock.adicionarPessoa).toHaveBeenCalledWith(10, 1);
+    expect(comunidadeServiceMock.adicionarPessoa).toHaveBeenCalledWith(
+      10,
+      1,
+      autorId,
+    );
     expect(result.id).toBe(1);
   });
 

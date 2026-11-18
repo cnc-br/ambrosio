@@ -33,6 +33,28 @@ Este documento orienta todos os agentes de IA (Antigravity/Gemini, GitHub Copilo
 - Ao propor uma alteração (`opsx-propose`), gere apenas os artefatos de planejamento (`proposal.md`, `specs/`, `design.md`, `tasks.md`).
 - **NÃO** edite código de produção durante o passo de proposta. A implementação ocorre exclusivamente no comando `opsx-apply`.
 
+### 2.4 Campos de Auditoria Obrigatórios
+
+Toda tabela (model Prisma) criada no futuro **DEVE** nascer com os campos de auditoria abaixo, seguindo exatamente o padrão do model `pessoa`:
+
+```prisma
+cadastradoPorId String?
+atualizadoPorId String?
+cadastradoPor   user?   @relation("<Model>CadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+atualizadoPor   user?   @relation("<Model>AtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+createdAt       DateTime @default(now())
+updatedAt       DateTime @default(now()) @updatedAt
+
+@@index([cadastradoPorId])
+@@index([atualizadoPorId])
+```
+
+- **Gravação da autoria**: em toda rota autenticada de criação/edição, obtenha o usuário com `@CurrentUser('id')` e grave `cadastradoPorId` + `atualizadoPorId` na criação e somente `atualizadoPorId` na edição. A autoria vem do contexto autenticado, **nunca** do payload (não aceite esses campos em DTOs).
+- **Rotas públicas**: use `OptionalAuthGuard` + `@CurrentUser('id')`; grave a autoria quando houver token e `NULL` quando não houver.
+- **Tabelas sem rota de escrita**: mantenha os campos `NULL` até existir rota autenticada que os preencha.
+- **Não exposição**: `cadastradoPorId` e `atualizadoPorId` não podem aparecer nas respostas da API (o `AuditoriaInterceptor` global remove esses campos; não os recrie em serializers).
+- **Exceções** (não recebem auditoria): `user`, `usuarioParoquia`, `usuarioSetor`, `ScheduledJobExecution`, o enum `ScheduledJobStatus` e tabelas de vínculo simples sem autoria própria.
+
 ---
 
 ## 3. Agent Skills & Issue Tracker

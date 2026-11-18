@@ -9,53 +9,107 @@ datasource db {
 }
 
 model pais {
-  id     Int      @id @default(autoincrement())
-  nome   String   @unique @db.VarChar(100)
-  estado estado[]
+  id              Int      @id @default(autoincrement())
+  nome            String   @unique @db.VarChar(100)
+  estado          estado[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("PaisCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("PaisAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model estado {
-  id     Int      @id @default(autoincrement())
-  nome   String   @unique @db.VarChar(100)
-  sigla  String   @unique @db.VarChar(2)
-  ativo  Boolean  @default(true)
-  paisId Int
-  cidade cidade[]
-  pais   pais     @relation(fields: [paisId], references: [id])
+  id              Int      @id @default(autoincrement())
+  nome            String   @unique @db.VarChar(100)
+  sigla           String   @unique @db.VarChar(2)
+  ativo           Boolean  @default(true)
+  paisId          Int
+  cidade          cidade[]
+  pais            pais     @relation(fields: [paisId], references: [id])
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("EstadoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("EstadoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model cidade {
-  id       Int        @id @default(autoincrement())
-  nome     String     @unique @db.VarChar(100)
-  estadoId Int
-  ativo    Boolean    @default(true)
-  estado   estado     @relation(fields: [estadoId], references: [id])
-  endereco endereco[]
+  id              Int        @id @default(autoincrement())
+  nome            String     @unique @db.VarChar(100)
+  estadoId        Int
+  ativo           Boolean    @default(true)
+  estado          estado     @relation(fields: [estadoId], references: [id])
+  endereco        endereco[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?      @relation("CidadeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?      @relation("CidadeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model endereco {
-  id         Int              @id @default(autoincrement())
-  cep        String           @db.VarChar(8)
-  logradouro String           @db.VarChar(50)
-  bairro     String           @db.VarChar(50)
-  numero     String           @db.VarChar(5)
-  cidadeId   Int
-  observacao String?          @db.VarChar(250)
-  diocese    diocese[]
-  cidade     cidade           @relation(fields: [cidadeId], references: [id])
-  localidade localidade[]
-  paroquias  paroquia[]
-  pessoas    pessoaEndereco[]
+  id              Int              @id @default(autoincrement())
+  cep             String           @db.VarChar(8)
+  logradouro      String           @db.VarChar(50)
+  bairro          String           @db.VarChar(50)
+  numero          String           @db.VarChar(5)
+  cidadeId        Int
+  observacao      String?          @db.VarChar(250)
+  diocese         diocese[]
+  cidade          cidade           @relation(fields: [cidadeId], references: [id])
+  localidade      localidade[]
+  paroquias       paroquia[]
+  pessoas         pessoaEndereco[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?            @relation("EnderecoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?            @relation("EnderecoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model estadoCivil {
-  id        Int    @id @default(autoincrement())
-  descricao String @unique @db.VarChar(20)
+  id              Int      @id @default(autoincrement())
+  descricao       String   @unique @db.VarChar(20)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("EstadoCivilCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("EstadoCivilAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model escolaridade {
-  id        Int    @id @default(autoincrement())
-  descricao String @unique @db.VarChar(30)
+  id              Int      @id @default(autoincrement())
+  descricao       String   @unique @db.VarChar(30)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("EscolaridadeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("EscolaridadeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model pessoa {
@@ -85,80 +139,145 @@ model pessoa {
 }
 
 model situacaoReligiosa {
-  id        Int      @id @default(autoincrement())
-  descricao String   @unique @db.VarChar(50)
-  sexoUnico Sexo?
-  pessoa    pessoa[]
+  id              Int      @id @default(autoincrement())
+  descricao       String   @unique @db.VarChar(50)
+  sexoUnico       Sexo?
+  pessoa          pessoa[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("SituacaoReligiosaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("SituacaoReligiosaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model carisma {
-  id             Int             @id @default(autoincrement())
-  descricao      String          @db.VarChar(100)
-  tipo           tipoCarismaEnum
-  casalAndaJunto Boolean         @default(false)
-  pessoaCarismas pessoaCarisma[]
+  id              Int             @id @default(autoincrement())
+  descricao       String          @db.VarChar(100)
+  tipo            tipoCarismaEnum
+  casalAndaJunto  Boolean         @default(false)
+  pessoaCarismas  pessoaCarisma[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?           @relation("CarismaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?           @relation("CarismaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now()) @updatedAt
 
   @@unique([descricao, tipo])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model pessoaCarisma {
-  id         Int      @id @default(autoincrement())
-  pessoaId   Int
-  carismaId  Int
-  observacao String?  @db.VarChar(255)
-  createdAt  DateTime @default(now())
-  carisma    carisma  @relation(fields: [carismaId], references: [id], onDelete: Cascade)
-  pessoa     pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  id              Int      @id @default(autoincrement())
+  pessoaId        Int
+  carismaId       Int
+  observacao      String?  @db.VarChar(255)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  carisma         carisma  @relation(fields: [carismaId], references: [id], onDelete: Cascade)
+  pessoa          pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("PessoaCarismaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("PessoaCarismaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
 
   @@unique([pessoaId, carismaId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model pessoaEndereco {
-  pessoaId   Int
-  enderecoId Int
-  endereco   endereco @relation(fields: [enderecoId], references: [id], onDelete: Cascade)
-  pessoa     pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  pessoaId        Int
+  enderecoId      Int
+  endereco        endereco @relation(fields: [enderecoId], references: [id], onDelete: Cascade)
+  pessoa          pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("PessoaEnderecoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("PessoaEnderecoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   @@id([pessoaId, enderecoId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model pessoaCasal {
-  id             Int    @id @default(autoincrement())
-  pessoaMaridoId Int
-  pessoaMulherId Int
-  marido         pessoa @relation("Marido", fields: [pessoaMaridoId], references: [id], onDelete: Cascade)
-  mulher         pessoa @relation("Mulher", fields: [pessoaMulherId], references: [id], onDelete: Cascade)
+  id              Int      @id @default(autoincrement())
+  pessoaMaridoId  Int
+  pessoaMulherId  Int
+  marido          pessoa   @relation("Marido", fields: [pessoaMaridoId], references: [id], onDelete: Cascade)
+  mulher          pessoa   @relation("Mulher", fields: [pessoaMulherId], references: [id], onDelete: Cascade)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("PessoaCasalCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("PessoaCasalAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   @@unique([pessoaMaridoId, pessoaMulherId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model passaportePessoa {
-  id            Int       @id @default(autoincrement())
-  pessoaId      Int
-  numero        String
-  dataExpiracao DateTime
-  renovado      Boolean   @default(false)
-  dataRenovacao DateTime?
-  pessoa        pessoa    @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  id              Int       @id @default(autoincrement())
+  pessoaId        Int
+  numero          String
+  dataExpiracao   DateTime
+  renovado        Boolean   @default(false)
+  dataRenovacao   DateTime?
+  pessoa          pessoa    @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?     @relation("PassaportePessoaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?     @relation("PassaportePessoaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model tipoDiocese {
-  id        Int       @id @default(autoincrement())
-  descricao String    @db.VarChar(50)
-  dioceses  diocese[]
+  id              Int       @id @default(autoincrement())
+  descricao       String    @db.VarChar(50)
+  dioceses        diocese[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?     @relation("TipoDioceseCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?     @relation("TipoDioceseAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model diocese {
-  id            Int          @id @default(autoincrement())
-  tipoDioceseId Int
-  descricao     String       @db.VarChar(90)
-  enderecoId    Int
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @default(now()) @updatedAt
-  endereco      endereco     @relation(fields: [enderecoId], references: [id])
-  tipoDiocese   tipoDiocese  @relation(fields: [tipoDioceseId], references: [id])
-  localidade    localidade[]
-  paroquias     paroquia[]
+  id              Int          @id @default(autoincrement())
+  tipoDioceseId   Int
+  descricao       String       @db.VarChar(90)
+  enderecoId      Int
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
+  endereco        endereco     @relation(fields: [enderecoId], references: [id])
+  tipoDiocese     tipoDiocese  @relation(fields: [tipoDioceseId], references: [id])
+  localidade      localidade[]
+  paroquias       paroquia[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?        @relation("DioceseCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?        @relation("DioceseAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model paroquia {
@@ -172,6 +291,15 @@ model paroquia {
   endereco         endereco          @relation(fields: [enderecoId], references: [id])
   setor            setor             @relation(fields: [setorId], references: [id])
   usuarioParoquias usuarioParoquia[]
+  cadastradoPorId  String?
+  atualizadoPorId  String?
+  cadastradoPor    user?             @relation("ParoquiaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor    user?             @relation("ParoquiaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model etapa {
@@ -179,12 +307,30 @@ model etapa {
   descricao        String            @db.VarChar(50)
   comunidadeEtapas comunidadeEtapa[]
   comunidades      comunidade[]
+  cadastradoPorId  String?
+  atualizadoPorId  String?
+  cadastradoPor    user?             @relation("EtapaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor    user?             @relation("EtapaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model tipoEquipe {
-  id        Int      @id @default(autoincrement())
-  descricao String   @db.VarChar(80)
-  equipes   equipe[]
+  id              Int      @id @default(autoincrement())
+  descricao       String   @db.VarChar(80)
+  equipes         equipe[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("TipoEquipeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("TipoEquipeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model equipe {
@@ -197,18 +343,32 @@ model equipe {
   comunidadeEtapas comunidadeEtapa[]
   tipoEquipe       tipoEquipe        @relation(fields: [tipoEquipeId], references: [id])
   equipePessoas    equipePessoa[]
+  cadastradoPorId  String?
+  atualizadoPorId  String?
+  cadastradoPor    user?             @relation("EquipeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor    user?             @relation("EquipeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model equipePessoa {
-  id         Int      @id @default(autoincrement())
-  equipeId   Int
-  pessoaId   Int
-  observacao String?  @db.VarChar(255)
-  createdAt  DateTime @default(now())
-  equipe     equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
-  pessoa     pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  id              Int      @id @default(autoincrement())
+  equipeId        Int
+  pessoaId        Int
+  observacao      String?  @db.VarChar(255)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  equipe          equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  pessoa          pessoa   @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("EquipePessoaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("EquipePessoaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
 
   @@unique([equipeId, pessoaId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model localidade {
@@ -221,32 +381,108 @@ model localidade {
   diocese          diocese        @relation(fields: [dioceseId], references: [id])
   endereco         endereco       @relation(fields: [enderecoId], references: [id])
   tipoLocalidade   tipoLocalidade @relation(fields: [tipoLocalidadeId], references: [id])
+  cadastradoPorId  String?
+  atualizadoPorId  String?
+  cadastradoPor    user?          @relation("LocalidadeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor    user?          @relation("LocalidadeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model tipoLocalidade {
-  id         Int          @id @default(autoincrement())
-  descricao  String       @db.VarChar(80)
-  localidade localidade[]
+  id              Int          @id @default(autoincrement())
+  descricao       String       @db.VarChar(80)
+  localidade      localidade[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?        @relation("TipoLocalidadeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?        @relation("TipoLocalidadeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model user {
-  id                   String            @id @default(cuid())
-  email                String            @unique
-  password             String
-  role                 roles             @default(NAO_IDENTIFICADO)
-  whatsapp             String?           @db.VarChar(20)
-  verifiedWhatsapp     Boolean           @default(false)
-  active               Boolean           @default(false)
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
-  pessoaId             Int?
-  pessoa               pessoa?           @relation(fields: [pessoaId], references: [id])
-  pessoasCadastradas   pessoa[]          @relation("PessoaCadastradaPor")
-  pessoasAtualizadas   pessoa[]          @relation("PessoaAtualizadaPor")
-  resetPasswordToken   String?
-  resetPasswordExpires DateTime?
-  usuarioParoquias     usuarioParoquia[]
-  usuarioSetores       usuarioSetor[]
+  id                              String                @id @default(cuid())
+  email                           String                @unique
+  password                        String
+  role                            roles                 @default(NAO_IDENTIFICADO)
+  whatsapp                        String?               @db.VarChar(20)
+  verifiedWhatsapp                Boolean               @default(false)
+  active                          Boolean               @default(false)
+  createdAt                       DateTime              @default(now())
+  updatedAt                       DateTime              @updatedAt
+  pessoaId                        Int?
+  pessoa                          pessoa?               @relation(fields: [pessoaId], references: [id])
+  pessoasCadastradas              pessoa[]              @relation("PessoaCadastradaPor")
+  pessoasAtualizadas              pessoa[]              @relation("PessoaAtualizadaPor")
+  resetPasswordToken              String?
+  resetPasswordExpires            DateTime?
+  usuarioParoquias                usuarioParoquia[]
+  usuarioSetores                  usuarioSetor[]
+  paisesCadastrados               pais[]                @relation("PaisCadastradoPor")
+  paisesAtualizados               pais[]                @relation("PaisAtualizadoPor")
+  estadosCadastrados              estado[]              @relation("EstadoCadastradoPor")
+  estadosAtualizados              estado[]              @relation("EstadoAtualizadoPor")
+  cidadesCadastrados              cidade[]              @relation("CidadeCadastradoPor")
+  cidadesAtualizados              cidade[]              @relation("CidadeAtualizadoPor")
+  enderecosCadastrados            endereco[]            @relation("EnderecoCadastradoPor")
+  enderecosAtualizados            endereco[]            @relation("EnderecoAtualizadoPor")
+  estadosCivisCadastrados         estadoCivil[]         @relation("EstadoCivilCadastradoPor")
+  estadosCivisAtualizados         estadoCivil[]         @relation("EstadoCivilAtualizadoPor")
+  escolaridadesCadastradas        escolaridade[]        @relation("EscolaridadeCadastradoPor")
+  escolaridadesAtualizadas        escolaridade[]        @relation("EscolaridadeAtualizadoPor")
+  situacoesReligiosasCadastradas  situacaoReligiosa[]   @relation("SituacaoReligiosaCadastradoPor")
+  situacoesReligiosasAtualizadas  situacaoReligiosa[]   @relation("SituacaoReligiosaAtualizadoPor")
+  carismasCadastrados             carisma[]             @relation("CarismaCadastradoPor")
+  carismasAtualizados             carisma[]             @relation("CarismaAtualizadoPor")
+  pessoaCarismasCadastrados       pessoaCarisma[]       @relation("PessoaCarismaCadastradoPor")
+  pessoaCarismasAtualizados       pessoaCarisma[]       @relation("PessoaCarismaAtualizadoPor")
+  pessoaEnderecosCadastrados      pessoaEndereco[]      @relation("PessoaEnderecoCadastradoPor")
+  pessoaEnderecosAtualizados      pessoaEndereco[]      @relation("PessoaEnderecoAtualizadoPor")
+  pessoaCasaisCadastrados         pessoaCasal[]         @relation("PessoaCasalCadastradoPor")
+  pessoaCasaisAtualizados         pessoaCasal[]         @relation("PessoaCasalAtualizadoPor")
+  passaportesPessoasCadastrados   passaportePessoa[]    @relation("PassaportePessoaCadastradoPor")
+  passaportesPessoasAtualizados   passaportePessoa[]    @relation("PassaportePessoaAtualizadoPor")
+  tiposDioceseCadastrados         tipoDiocese[]         @relation("TipoDioceseCadastradoPor")
+  tiposDioceseAtualizados         tipoDiocese[]         @relation("TipoDioceseAtualizadoPor")
+  diocesesCadastradas             diocese[]             @relation("DioceseCadastradoPor")
+  diocesesAtualizadas             diocese[]             @relation("DioceseAtualizadoPor")
+  paroquiasCadastradas            paroquia[]            @relation("ParoquiaCadastradoPor")
+  paroquiasAtualizadas            paroquia[]            @relation("ParoquiaAtualizadoPor")
+  etapasCadastradas               etapa[]               @relation("EtapaCadastradoPor")
+  etapasAtualizadas               etapa[]               @relation("EtapaAtualizadoPor")
+  tiposEquipeCadastrados          tipoEquipe[]          @relation("TipoEquipeCadastradoPor")
+  tiposEquipeAtualizados          tipoEquipe[]          @relation("TipoEquipeAtualizadoPor")
+  equipesCadastradas              equipe[]              @relation("EquipeCadastradoPor")
+  equipesAtualizadas              equipe[]              @relation("EquipeAtualizadoPor")
+  equipePessoasCadastrados        equipePessoa[]        @relation("EquipePessoaCadastradoPor")
+  equipePessoasAtualizados        equipePessoa[]        @relation("EquipePessoaAtualizadoPor")
+  localidadesCadastradas          localidade[]          @relation("LocalidadeCadastradoPor")
+  localidadesAtualizadas          localidade[]          @relation("LocalidadeAtualizadoPor")
+  tiposLocalidadeCadastrados      tipoLocalidade[]      @relation("TipoLocalidadeCadastradoPor")
+  tiposLocalidadeAtualizados      tipoLocalidade[]      @relation("TipoLocalidadeAtualizadoPor")
+  setoresCadastrados              setor[]               @relation("SetorCadastradoPor")
+  setoresAtualizados              setor[]               @relation("SetorAtualizadoPor")
+  macroRegioesCadastradas         macroRegiao[]         @relation("MacroRegiaoCadastradoPor")
+  macroRegioesAtualizadas         macroRegiao[]         @relation("MacroRegiaoAtualizadoPor")
+  regioesCadastradas              regiao[]              @relation("RegiaoCadastradoPor")
+  regioesAtualizadas              regiao[]              @relation("RegiaoAtualizadoPor")
+  comunidadesCadastradas          comunidade[]          @relation("ComunidadeCadastradoPor")
+  comunidadesAtualizadas          comunidade[]          @relation("ComunidadeAtualizadoPor")
+  comunidadeEtapasCadastradas     comunidadeEtapa[]     @relation("ComunidadeEtapaCadastradoPor")
+  comunidadeEtapasAtualizadas     comunidadeEtapa[]     @relation("ComunidadeEtapaAtualizadoPor")
+  comunidadePessoasCadastradas    comunidadePessoa[]    @relation("ComunidadePessoaCadastradoPor")
+  comunidadePessoasAtualizadas    comunidadePessoa[]    @relation("ComunidadePessoaAtualizadoPor")
+  comunidadeHistoricosCadastrados comunidadeHistorico[] @relation("ComunidadeHistoricoCadastradoPor")
+  comunidadeHistoricosAtualizados comunidadeHistorico[] @relation("ComunidadeHistoricoAtualizadoPor")
+  avisosCadastrados               aviso[]               @relation("AvisoCadastradoPor")
+  avisosAtualizados               aviso[]               @relation("AvisoAtualizadoPor")
 }
 
 model usuarioParoquia {
@@ -267,8 +503,16 @@ model setor {
   paroquia        paroquia[]
   usuarioSetores  usuarioSetor[]
   regiao          regiao         @relation(fields: [regiaoId], references: [id])
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?          @relation("SetorCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?          @relation("SetorAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
 
   @@unique([descricao, regiaoId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model usuarioSetor {
@@ -282,21 +526,38 @@ model usuarioSetor {
 }
 
 model macroRegiao {
-  id        Int      @id @default(autoincrement())
-  descricao String   @db.VarChar(50)
-  ativo     Boolean  @default(true)
-  regiao    regiao[]
+  id              Int      @id @default(autoincrement())
+  descricao       String   @db.VarChar(50)
+  ativo           Boolean  @default(true)
+  regiao          regiao[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("MacroRegiaoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("MacroRegiaoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model regiao {
-  id            Int         @id @default(autoincrement())
-  descricao     String      @unique @db.VarChar(100)
-  macroRegiaoId Int
-  ativo         Boolean     @default(true)
-  macroRegiao   macroRegiao @relation(fields: [macroRegiaoId], references: [id])
-  setor         setor[]
+  id              Int         @id @default(autoincrement())
+  descricao       String      @unique @db.VarChar(100)
+  macroRegiaoId   Int
+  ativo           Boolean     @default(true)
+  macroRegiao     macroRegiao @relation(fields: [macroRegiaoId], references: [id])
+  setor           setor[]
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?       @relation("RegiaoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?       @relation("RegiaoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @default(now()) @updatedAt
 
   @@unique([descricao, macroRegiaoId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model comunidade {
@@ -313,8 +574,14 @@ model comunidade {
   comunidadeEtapas     comunidadeEtapa[]
   comunidadePessoas    comunidadePessoa[]
   comunidadeHistoricos comunidadeHistorico[]
+  cadastradoPorId      String?
+  atualizadoPorId      String?
+  cadastradoPor        user?                 @relation("ComunidadeCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor        user?                 @relation("ComunidadeAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
 
   @@unique([numeroDaComunidade, paroquiaId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model comunidadeEtapa {
@@ -330,38 +597,66 @@ model comunidadeEtapa {
   comunidade       comunidade @relation(fields: [comunidadeId], references: [id], onDelete: Cascade)
   equipe           equipe?    @relation(fields: [equipeId], references: [id])
   etapa            etapa      @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  cadastradoPorId  String?
+  atualizadoPorId  String?
+  cadastradoPor    user?      @relation("ComunidadeEtapaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor    user?      @relation("ComunidadeEtapaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model comunidadePessoa {
-  id           Int        @id @default(autoincrement())
-  comunidadeId Int
-  pessoaId     Int
-  dataEntrada  DateTime
-  dataSaida    DateTime?
-  observacao   String?    @db.VarChar(250)
-  createdAt    DateTime   @default(now())
-  comunidade   comunidade @relation(fields: [comunidadeId], references: [id], onDelete: Cascade)
-  pessoa       pessoa     @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  id              Int        @id @default(autoincrement())
+  comunidadeId    Int
+  pessoaId        Int
+  dataEntrada     DateTime
+  dataSaida       DateTime?
+  observacao      String?    @db.VarChar(250)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+  comunidade      comunidade @relation(fields: [comunidadeId], references: [id], onDelete: Cascade)
+  pessoa          pessoa     @relation(fields: [pessoaId], references: [id], onDelete: Cascade)
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?      @relation("ComunidadePessoaCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?      @relation("ComunidadePessoaAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
 
   @@unique([comunidadeId, pessoaId])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model comunidadeHistorico {
-  id           Int        @id @default(autoincrement())
-  comunidadeId Int
-  descricao    String?    @db.Text
-  comunidade   comunidade @relation(fields: [comunidadeId], references: [id], onDelete: Cascade)
-  createdAt    DateTime   @default(now())
+  id              Int        @id @default(autoincrement())
+  comunidadeId    Int
+  descricao       String?    @db.Text
+  comunidade      comunidade @relation(fields: [comunidadeId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?      @relation("ComunidadeHistoricoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?      @relation("ComunidadeHistoricoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 model aviso {
-  id        Int      @id @default(autoincrement())
-  texto     String   @db.Text
-  dataFim   DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id              Int      @id @default(autoincrement())
+  texto           String   @db.Text
+  dataFim         DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+  cadastradoPorId String?
+  atualizadoPorId String?
+  cadastradoPor   user?    @relation("AvisoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)
+  atualizadoPor   user?    @relation("AvisoAtualizadoPor", fields: [atualizadoPorId], references: [id], onDelete: SetNull)
 
   @@index([dataFim])
+  @@index([cadastradoPorId])
+  @@index([atualizadoPorId])
 }
 
 enum Sexo {

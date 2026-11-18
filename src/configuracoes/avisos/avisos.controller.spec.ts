@@ -58,7 +58,7 @@ describe('AvisosController', () => {
 
     await controller.create(dto);
 
-    expect(create).toHaveBeenCalledWith(dto);
+    expect(create).toHaveBeenCalledWith(dto, undefined);
   });
 
   it('delega a listagem ao service', async () => {
@@ -83,7 +83,7 @@ describe('AvisosController', () => {
 
     await controller.update(9, dto);
 
-    expect(update).toHaveBeenCalledWith(9, dto);
+    expect(update).toHaveBeenCalledWith(9, dto, undefined);
   });
 
   it('exige autenticação e o papel ADMIN em POST /avisos', () => {

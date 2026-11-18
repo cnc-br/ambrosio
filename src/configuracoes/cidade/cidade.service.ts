@@ -13,7 +13,7 @@ export class CidadeService {
     private estadoService: EstadoService,
   ) {}
 
-  async createOrSelect(createCidadeDto: CreateCidadeDto) {
+  async createOrSelect(createCidadeDto: CreateCidadeDto, userId?: string) {
     const cidade = await this.findByName(createCidadeDto.nome);
 
     if (cidade) {
@@ -35,6 +35,8 @@ export class CidadeService {
       data: {
         nome: createCidadeDto.nome,
         estadoId: uf.id,
+        cadastradoPorId: userId ?? null,
+        atualizadoPorId: userId ?? null,
       },
     });
   }

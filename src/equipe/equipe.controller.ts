@@ -14,6 +14,7 @@ import { UpdateEquipeDto } from './dto/update-equipe.dto.js';
 import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CurrentUser } from 'src/auth/current-user.decorator.js';
 
 @Controller('equipe')
 @ApiTags('Equipe')
@@ -23,8 +24,11 @@ export class EquipeController {
 
   @Post()
   @ApiCreatedResponse({ description: 'Equipe criada com sucesso.' })
-  create(@Body() createEquipeDto: CreateEquipeDto) {
-    return this.equipeService.create(createEquipeDto);
+  create(
+    @Body() createEquipeDto: CreateEquipeDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.equipeService.create(createEquipeDto, userId);
   }
 
   @Get()
@@ -38,8 +42,12 @@ export class EquipeController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEquipeDto: UpdateEquipeDto) {
-    return this.equipeService.update(+id, updateEquipeDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateEquipeDto: UpdateEquipeDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.equipeService.update(+id, updateEquipeDto, userId);
   }
 
   @Delete(':id')
