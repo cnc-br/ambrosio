@@ -103,6 +103,13 @@ describe('CaslAbilityService', () => {
       expect(service.ability.can('update', 'diocese')).toBe(false);
       expect(service.ability.can('delete', 'diocese')).toBe(false);
     });
+
+    it('não gerencia a hierarquia do mapa', () => {
+      for (const subject of ['macroRegiao', 'regiao', 'setor'] as const) {
+        expect(service.ability.can('create', subject)).toBe(false);
+        expect(service.ability.can('update', subject)).toBe(false);
+      }
+    });
   });
 
   describe('SECRETARIA_CNC', () => {
@@ -169,6 +176,14 @@ describe('CaslAbilityService', () => {
       expect(service.ability.can('update', 'diocese')).toBe(true);
       expect(service.ability.can('delete', 'diocese')).toBe(true);
     });
+
+    it('gerencia a hierarquia do mapa (create/update)', () => {
+      for (const subject of ['macroRegiao', 'regiao', 'setor'] as const) {
+        expect(service.ability.can('create', subject)).toBe(true);
+        expect(service.ability.can('update', subject)).toBe(true);
+        expect(service.ability.can('delete', subject)).toBe(false);
+      }
+    });
   });
 
   it('não restringe a atualização de pessoa do ADMIN', () => {
@@ -184,6 +199,17 @@ describe('CaslAbilityService', () => {
 
     expect(service.ability.can('create', 'pessoa')).toBe(false);
     expect(service.ability.can('update', 'pessoa')).toBe(false);
+  });
+
+  it('não permite que o NAO_IDENTIFICADO gerencie a hierarquia do mapa', () => {
+    service.createForUser(
+      usuario('usuario-nao-identificado', UserRoleEnum.NAO_IDENTIFICADO),
+    );
+
+    for (const subject of ['macroRegiao', 'regiao', 'setor'] as const) {
+      expect(service.ability.can('create', subject)).toBe(false);
+      expect(service.ability.can('update', subject)).toBe(false);
+    }
   });
 
   it('não restringe a leitura de comunidades do ADMIN', () => {

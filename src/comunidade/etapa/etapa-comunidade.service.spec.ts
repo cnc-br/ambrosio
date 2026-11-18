@@ -13,6 +13,8 @@ import { TipoDioceseService } from 'src/configuracoes/tipo-diocese/tipo-diocese.
 import { EnderecoService } from 'src/endereco/endereco.service.js';
 import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { SetorService } from 'src/mapa/setor/setor.service.js';
+import { RegiaoService } from 'src/mapa/regiao/regiao.service.js';
+import { MacroRegiaoService } from 'src/mapa/macro-regiao/macro-regiao.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { SaoPedroPessoaService } from 'src/external/sao-pedro/sao-pedro-pessoa.service.js';
 
@@ -34,6 +36,8 @@ describe('EtapaService', () => {
         EstadoService,
         CidadeService,
         SetorService,
+        RegiaoService,
+        MacroRegiaoService,
         HistoricoService,
         DioceseService,
         PaisService,

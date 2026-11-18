@@ -9,6 +9,8 @@ import { EnderecoService } from 'src/endereco/endereco.service.js';
 import { CidadeService } from 'src/configuracoes/cidade/cidade.service.js';
 import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { SetorService } from 'src/mapa/setor/setor.service.js';
+import { RegiaoService } from 'src/mapa/regiao/regiao.service.js';
+import { MacroRegiaoService } from 'src/mapa/macro-regiao/macro-regiao.service.js';
 import { JwtService } from '@nestjs/jwt';
 import { TipoDioceseService } from 'src/configuracoes/tipo-diocese/tipo-diocese.service.js';
 import { EstadoService } from 'src/configuracoes/estado/estado.service.js';
@@ -36,6 +38,8 @@ describe('ComunidadeService', () => {
         EtapaComunidadeService,
         EstadoService,
         SetorService,
+        RegiaoService,
+        MacroRegiaoService,
         JwtService,
         TipoDioceseService,
         HistoricoService,

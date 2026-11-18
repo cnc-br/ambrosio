@@ -10,9 +10,12 @@ import {
   estadoCivil,
   etapa,
   localidade,
+  macroRegiao,
   paroquia,
   pessoa,
+  regiao,
   ScheduledJobExecution,
+  setor,
   user,
 } from 'src/prisma/generated-client.js';
 
@@ -37,6 +40,9 @@ export type PermissionResource =
     etapa: etapa;
     estadoCivil: estadoCivil;
     scheduledJobExecution: ScheduledJobExecution;
+    macroRegiao: macroRegiao;
+    regiao: regiao;
+    setor: setor;
   }>
   | 'all';
 
@@ -197,7 +203,8 @@ const secretariaPorSetor: DefinePermissions = (user, builder) => {
   const escopo = escopoPorSetor(user);
   aplicarPermissoes(builder, permissoesSecretaria(escopo));
   // Capacidades exclusivas do SECRETARIA_CNC: gestão de paróquias dentro do
-  // próprio setor e CRUD irrestrito de diocese (a leitura já vem da base).
+  // próprio setor, CRUD irrestrito de diocese (a leitura já vem da base) e
+  // manutenção nacional da hierarquia do mapa (macro-região, região e setor).
   aplicarPermissoes(builder, [
     { action: 'create', subject: 'diocese' },
     { action: 'update', subject: 'diocese' },
@@ -205,6 +212,12 @@ const secretariaPorSetor: DefinePermissions = (user, builder) => {
     { action: 'create', subject: 'paroquia' },
     { action: 'update', subject: 'paroquia', conditions: escopo.paroquia },
     { action: 'delete', subject: 'paroquia', conditions: escopo.paroquia },
+    { action: 'create', subject: 'macroRegiao' },
+    { action: 'update', subject: 'macroRegiao' },
+    { action: 'create', subject: 'regiao' },
+    { action: 'update', subject: 'regiao' },
+    { action: 'create', subject: 'setor' },
+    { action: 'update', subject: 'setor' },
   ]);
 };
 
@@ -214,12 +227,34 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
   },
   NAO_IDENTIFICADO(user, { cannot }) {
     cannot('read', 'pessoa');
+    cannot('create', 'pessoa');
+    cannot('update', 'pessoa');
+    cannot('delete', 'pessoa');
     cannot('read', 'diocese');
+    cannot('create', 'diocese');
+    cannot('update', 'diocese');
+    cannot('delete', 'diocese');
     cannot('read', 'paroquia');
+    cannot('create', 'paroquia');
+    cannot('update', 'paroquia');
+    cannot('delete', 'paroquia');
     cannot('read', 'localidade');
     cannot('read', 'user');
+    cannot('create', 'user');
+    cannot('update', 'user');
+    cannot('delete', 'user');
     cannot('read', 'equipe');
+    cannot('create', 'comunidade');
+    cannot('update', 'comunidade');
+    cannot('delete', 'comunidade');
     cannot('read', 'carisma');
+    cannot('create', 'carisma');
+    cannot('update', 'carisma');
+    cannot('delete', 'carisma');
+    cannot('read', 'etapa');
+    cannot('create', 'etapa');
+    cannot('update', 'etapa');
+    cannot('delete', 'etapa');
   },
   CATEQUISTA_NACIONAL: grantReadPessoaDiocese,
   CATEQUISTA_GRANDE_REGIAO: grantReadPessoaDiocese,

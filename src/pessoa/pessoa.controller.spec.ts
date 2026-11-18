@@ -22,6 +22,8 @@ import { EnderecoService } from 'src/endereco/endereco.service.js';
 import { EstadoService } from 'src/configuracoes/estado/estado.service.js';
 import { CidadeService } from 'src/configuracoes/cidade/cidade.service.js';
 import { SetorService } from 'src/mapa/setor/setor.service.js';
+import { RegiaoService } from 'src/mapa/regiao/regiao.service.js';
+import { MacroRegiaoService } from 'src/mapa/macro-regiao/macro-regiao.service.js';
 import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { HttpModule } from '@nestjs/axios';
 
@@ -56,6 +58,8 @@ describe('PessoaController', () => {
         EstadoService,
         CidadeService,
         SetorService,
+        RegiaoService,
+        MacroRegiaoService,
         PaisService,
         CaslAbilityService,
         {
