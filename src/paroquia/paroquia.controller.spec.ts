@@ -12,6 +12,8 @@ import { EstadoService } from 'src/configuracoes/estado/estado.service.js';
 import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { SetorService } from 'src/mapa/setor/setor.service.js';
+import { RegiaoService } from 'src/mapa/regiao/regiao.service.js';
+import { MacroRegiaoService } from 'src/mapa/macro-regiao/macro-regiao.service.js';
 
 describe('ParoquiaController', () => {
   let controller: ParoquiaController;
@@ -39,6 +41,8 @@ describe('ParoquiaController', () => {
         EstadoService,
         PaisService,
         SetorService,
+        RegiaoService,
+        MacroRegiaoService,
         JwtService,
         CaslAbilityService,
         {
@@ -58,7 +62,7 @@ describe('ParoquiaController', () => {
     cidadeService = module.get<CidadeService>(CidadeService);
     estadoService = module.get<EstadoService>(EstadoService);
     paisService = module.get<PaisService>(PaisService);
-    setorService = module.get<SetorService>(SetorService);
+    setorService = await module.resolve<SetorService>(SetorService);
     dioceseService = await module.resolve<DioceseService>(DioceseService);
     jwtService = module.get<JwtService>(JwtService);
     abilityService =

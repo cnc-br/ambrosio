@@ -1,71 +1,116 @@
+import 'reflect-metadata';
+import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserRoleEnum } from 'neocatecumenal';
+import { AuthGuard } from 'src/auth/auth.guard.js';
+import { RoleGuard } from 'src/auth/role/role.guard.js';
+import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
+import { PrismaService } from 'src/prisma.service.js';
 import { MacroRegiaoController } from './macro-regiao.controller.js';
 import { MacroRegiaoService } from './macro-regiao.service.js';
-import { PrismaService } from 'src/prisma.service.js';
+
+const getGuards = (handler: (...args: never[]) => unknown) =>
+  (Reflect.getMetadata('__guards__', handler) as object[] | undefined) ?? [];
+
+const getRequiredRoles = (handler: (...args: never[]) => unknown) =>
+  Reflect.getMetadata('roles', handler);
 
 describe('MacroRegiaoController', () => {
   let controller: MacroRegiaoController;
-  let prisma: PrismaService;
+  let create: ReturnType<typeof vi.fn>;
+  let findAll: ReturnType<typeof vi.fn>;
+  let findOne: ReturnType<typeof vi.fn>;
+  let update: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    create = vi.fn();
+    findAll = vi.fn();
+    findOne = vi.fn();
+    update = vi.fn();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MacroRegiaoController],
-      providers: [MacroRegiaoService, PrismaService],
+      providers: [
+        {
+          provide: MacroRegiaoService,
+          useValue: { create, findAll, findOne, update },
+        },
+        { provide: JwtService, useValue: {} },
+        { provide: PrismaService, useValue: {} },
+        { provide: CaslAbilityService, useValue: {} },
+      ],
     }).compile();
 
     controller = module.get<MacroRegiaoController>(MacroRegiaoController);
-    prisma = module.get<PrismaService>(PrismaService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
-    expect(prisma).toBeDefined();
   });
 
-  it('should return all macro-regioes', async () => {
-    const macroRegioes = [
-      {
-        id: 1,
-        descricao: 'Macro Região 1',
-        ativo: true,
-        cadastradoPorId: null,
-        atualizadoPorId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 2,
-        descricao: 'Macro Região 2',
-        ativo: false,
-        cadastradoPorId: null,
-        atualizadoPorId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ];
-    vi.spyOn(prisma.macroRegiao, 'findMany').mockResolvedValue(macroRegioes);
+  it('delega a listagem ao service', async () => {
+    findAll.mockResolvedValue([]);
 
-    expect(await controller.findAll()).toEqual(macroRegioes);
+    await controller.findAll();
+
+    expect(findAll).toHaveBeenCalledTimes(1);
   });
 
-  it('should return a macro-regiao by id', async () => {
-    const macroRegiao = {
-      id: 1,
-      descricao: 'Macro Região 1',
-      ativo: true,
-      cadastradoPorId: null,
-      atualizadoPorId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    vi.spyOn(prisma.macroRegiao, 'findUniqueOrThrow').mockResolvedValue(macroRegiao);
+  it('delega a busca individual ao service com o id numérico', async () => {
+    findOne.mockResolvedValue({});
 
-    expect(await controller.findOne('1')).toEqual(macroRegiao);
+    await controller.findOne('1');
+
+    expect(findOne).toHaveBeenCalledWith(1);
   });
 
-  it('should return null for a non-existing macro-regiao', async () => {
-    vi.spyOn(prisma.macroRegiao, 'findUniqueOrThrow').mockResolvedValue(null);
+  it('delega a criação ao service com o usuário autenticado', async () => {
+    const dto = { descricao: 'Sudeste' };
+    create.mockResolvedValue({ id: 1, ...dto });
 
-    expect(await controller.findOne('999')).toBeNull();
+    await controller.create(dto, 'usuario-admin');
+
+    expect(create).toHaveBeenCalledWith(dto, 'usuario-admin');
+  });
+
+  it('delega a atualização ao service com o id numérico e o usuário', async () => {
+    const dto = { descricao: 'Sudeste Brasileiro' };
+    update.mockResolvedValue({ id: 1, ...dto });
+
+    await controller.update('1', dto, 'usuario-admin');
+
+    expect(update).toHaveBeenCalledWith(1, dto, 'usuario-admin');
+  });
+
+  it('exige autenticação e os papéis ADMIN/SECRETARIA_CNC em POST /macro-regiao', () => {
+    expect(getGuards(MacroRegiaoController.prototype.create)).toEqual(
+      expect.arrayContaining([AuthGuard, RoleGuard]),
+    );
+    expect(getRequiredRoles(MacroRegiaoController.prototype.create)).toEqual([
+      UserRoleEnum.ADMIN,
+      UserRoleEnum.SECRETARIA_CNC,
+    ]);
+  });
+
+  it('exige autenticação e os papéis ADMIN/SECRETARIA_CNC em PATCH /macro-regiao/:id', () => {
+    expect(getGuards(MacroRegiaoController.prototype.update)).toEqual(
+      expect.arrayContaining([AuthGuard, RoleGuard]),
+    );
+    expect(getRequiredRoles(MacroRegiaoController.prototype.update)).toEqual([
+      UserRoleEnum.ADMIN,
+      UserRoleEnum.SECRETARIA_CNC,
+    ]);
+  });
+
+  it('mantém GET /macro-regiao e GET /macro-regiao/:id públicos', () => {
+    expect(getGuards(MacroRegiaoController.prototype.findAll)).toHaveLength(0);
+    expect(
+      getRequiredRoles(MacroRegiaoController.prototype.findAll),
+    ).toBeUndefined();
+
+    expect(getGuards(MacroRegiaoController.prototype.findOne)).toHaveLength(0);
+    expect(
+      getRequiredRoles(MacroRegiaoController.prototype.findOne),
+    ).toBeUndefined();
   });
 });

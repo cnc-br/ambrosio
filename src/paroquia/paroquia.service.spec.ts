@@ -10,6 +10,8 @@ import { PaisService } from 'src/configuracoes/pais/pais.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { CaslAbilityService } from 'src/casl/casl-ability/casl-ability.service.js';
 import { SetorService } from 'src/mapa/setor/setor.service.js';
+import { RegiaoService } from 'src/mapa/regiao/regiao.service.js';
+import { MacroRegiaoService } from 'src/mapa/macro-regiao/macro-regiao.service.js';
 import { UpdateParoquiaDto } from './dto/update-paroquia.dto.js';
 import { UserRoleEnum } from 'neocatecumenal';
 
@@ -37,6 +39,8 @@ describe('ParoquiaService', () => {
         EstadoService,
         CidadeService,
         SetorService,
+        RegiaoService,
+        MacroRegiaoService,
         CaslAbilityService,
         {
           provide: PrismaService,
@@ -55,7 +59,7 @@ describe('ParoquiaService', () => {
     cidadeService = module.get<CidadeService>(CidadeService);
     estadoService = module.get<EstadoService>(EstadoService);
     paisService = module.get<PaisService>(PaisService);
-    setorService = module.get<SetorService>(SetorService);
+    setorService = await module.resolve<SetorService>(SetorService);
     prismaService = module.get<PrismaService>(PrismaService);
     abilityService =
       await module.resolve<CaslAbilityService>(CaslAbilityService);

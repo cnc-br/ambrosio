@@ -5,5 +5,6 @@ import { MacroRegiaoController } from './macro-regiao.controller.js';
 @Module({
   controllers: [MacroRegiaoController],
   providers: [MacroRegiaoService],
+  exports: [MacroRegiaoService],
 })
 export class MacroRegiaoModule {}

@@ -1,9 +1,4 @@
-import { IsNotEmpty, IsNumber, IsPositive } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
 import { CreateSetorDto } from './create-setor.dto.js';
 
-export class UpdateSetorDto extends CreateSetorDto {
-  @IsNotEmpty()
-  @IsNumber()
-  @IsPositive()
-  id: number;
-}
+export class UpdateSetorDto extends PartialType(CreateSetorDto) {}
