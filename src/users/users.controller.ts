@@ -28,7 +28,7 @@ import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { AdicionarParoquiasAoUsuarioDto } from './dto/adicionar-paroquias-ao-usuario.dto.js';
-import { AdicionarSetoresAoUsuarioDto } from './dto/adicionar-setores-ao-usuario.dto.js';
+import { AdicionarRegioesAoUsuarioDto } from './dto/adicionar-regioes-ao-usuario.dto.js';
 import { AuthGuard } from 'src/auth/auth.guard.js';
 import { RoleGuard } from 'src/auth/role/role.guard.js';
 import { CurrentUser } from 'src/auth/current-user.decorator.js';
@@ -136,30 +136,30 @@ export class UsersController {
     );
   }
 
-  @Patch(':id/setores')
+  @Patch(':id/regioes')
   @ApiOperation({
-    summary: 'Substitui os setores vinculados ao usuário',
+    summary: 'Substitui as regiões vinculadas ao usuário',
     description:
-      'Remove os vínculos anteriores e cria exatamente os setores informados em setorIds. ' +
-      'Uma lista vazia remove todos os setores do usuário.',
+      'Remove os vínculos anteriores e cria exatamente as regiões informadas em regiaoIds. ' +
+      'Uma lista vazia remove todas as regiões do usuário.',
   })
   @ApiParam({ name: 'id', type: String, description: 'ID do usuário.' })
-  @ApiOkResponse({ description: 'Vínculos de setor substituídos.' })
+  @ApiOkResponse({ description: 'Vínculos de região substituídos.' })
   @ApiBadRequestResponse({
-    description: 'setorIds não é um array de inteiros positivos únicos.',
+    description: 'regiaoIds não é um array de inteiros positivos únicos.',
   })
   @ApiNotFoundResponse({
-    description: 'Usuário não encontrado ou setor inexistente.',
+    description: 'Usuário não encontrado ou região inexistente.',
   })
   @ApiUnauthorizedResponse({ description: 'Token ausente ou inválido.' })
   @ApiForbiddenResponse({ description: 'Usuário sem permissão de update user.' })
-  adicionarSetoresAoUsuario(
+  adicionarRegioesAoUsuario(
     @Param('id') id: string,
-    @Body() adicionarSetoresAoUsuarioDto: AdicionarSetoresAoUsuarioDto,
+    @Body() adicionarRegioesAoUsuarioDto: AdicionarRegioesAoUsuarioDto,
   ) {
-    return this.usersService.adicionarSetoresAoUsuario(
+    return this.usersService.adicionarRegioesAoUsuario(
       id,
-      adicionarSetoresAoUsuarioDto.setorIds,
+      adicionarRegioesAoUsuarioDto.regiaoIds,
     );
   }
 

@@ -45,10 +45,10 @@ describe('UsersService', () => {
               findUniqueOrThrow: vi.fn(),
               update: vi.fn(),
             },
-            setor: {
+            regiao: {
               findMany: vi.fn(),
             },
-            usuarioSetor: {
+            usuarioRegiao: {
               deleteMany: vi.fn(),
               createMany: vi.fn(),
             },
@@ -83,6 +83,9 @@ describe('UsersService', () => {
       usuarioParoquias: [
         { paroquia: { id: 1, descricao: 'Paróquia São José' } },
       ],
+      usuarioRegioes: [
+        { regiao: { id: 3, descricao: 'Região Franca' } },
+      ],
     };
 
     it('compõe a pessoa vinculada via pessoaService e não expõe dados sensíveis', async () => {
@@ -107,6 +110,7 @@ describe('UsersService', () => {
         pessoaId: 42,
         pessoa: pessoaMock,
         paroquias: [{ id: 1, descricao: 'Paróquia São José' }],
+        regioes: [{ id: 3, descricao: 'Região Franca' }],
       });
       expect(result).not.toHaveProperty('password');
       expect(result).not.toHaveProperty('resetPasswordToken');
@@ -118,6 +122,7 @@ describe('UsersService', () => {
         ...baseUser,
         pessoaId: null,
         usuarioParoquias: [],
+        usuarioRegioes: [],
       } as never);
 
       const result = await service.findOne('user-sem-pessoa');
@@ -126,6 +131,7 @@ describe('UsersService', () => {
       expect(result).not.toHaveProperty('pessoa');
       expect(result).not.toHaveProperty('pessoaId');
       expect(result.paroquias).toEqual([]);
+      expect(result.regioes).toEqual([]);
       expect(result).not.toHaveProperty('password');
     });
   });
@@ -209,7 +215,7 @@ describe('UsersService', () => {
     });
   });
 
-  describe('adicionarSetoresAoUsuario', () => {
+  describe('adicionarRegioesAoUsuario', () => {
     const configurarTransacao = () => {
       vi.mocked(prismaService.$transaction).mockImplementation(
         async (callback: never) =>
@@ -217,20 +223,20 @@ describe('UsersService', () => {
       );
     };
 
-    it('substitui os vínculos anteriores pelos setores informados', async () => {
+    it('substitui os vínculos anteriores pelas regiões informadas', async () => {
       configurarTransacao();
       vi.mocked(prismaService.user.findUniqueOrThrow).mockResolvedValue({
         id: 'user-1',
       } as never);
-      vi.mocked(prismaService.setor.findMany).mockResolvedValue([
+      vi.mocked(prismaService.regiao.findMany).mockResolvedValue([
         { id: 1 },
         { id: 2 },
       ] as never);
-      vi.mocked(prismaService.usuarioSetor.createMany).mockResolvedValue({
+      vi.mocked(prismaService.usuarioRegiao.createMany).mockResolvedValue({
         count: 2,
       } as never);
 
-      const result = await service.adicionarSetoresAoUsuario('user-1', [1, 2]);
+      const result = await service.adicionarRegioesAoUsuario('user-1', [1, 2]);
 
       expect(abilityServiceMock.ability.can).toHaveBeenCalledWith(
         'update',
@@ -239,34 +245,34 @@ describe('UsersService', () => {
       expect(prismaService.user.findUniqueOrThrow).toHaveBeenCalledWith({
         where: { id: 'user-1' },
       });
-      expect(prismaService.usuarioSetor.deleteMany).toHaveBeenCalledWith({
+      expect(prismaService.usuarioRegiao.deleteMany).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
       });
-      expect(prismaService.usuarioSetor.createMany).toHaveBeenCalledWith({
+      expect(prismaService.usuarioRegiao.createMany).toHaveBeenCalledWith({
         data: [
-          { userId: 'user-1', setorId: 1 },
-          { userId: 'user-1', setorId: 2 },
+          { userId: 'user-1', regiaoId: 1 },
+          { userId: 'user-1', regiaoId: 2 },
         ],
       });
       expect(result).toEqual({ count: 2 });
     });
 
-    it('com lista vazia remove todos os vínculos sem consultar setores', async () => {
+    it('com lista vazia remove todos os vínculos sem consultar regiões', async () => {
       configurarTransacao();
       vi.mocked(prismaService.user.findUniqueOrThrow).mockResolvedValue({
         id: 'user-1',
       } as never);
-      vi.mocked(prismaService.usuarioSetor.createMany).mockResolvedValue({
+      vi.mocked(prismaService.usuarioRegiao.createMany).mockResolvedValue({
         count: 0,
       } as never);
 
-      await service.adicionarSetoresAoUsuario('user-1', []);
+      await service.adicionarRegioesAoUsuario('user-1', []);
 
-      expect(prismaService.setor.findMany).not.toHaveBeenCalled();
-      expect(prismaService.usuarioSetor.deleteMany).toHaveBeenCalledWith({
+      expect(prismaService.regiao.findMany).not.toHaveBeenCalled();
+      expect(prismaService.usuarioRegiao.deleteMany).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
       });
-      expect(prismaService.usuarioSetor.createMany).toHaveBeenCalledWith({
+      expect(prismaService.usuarioRegiao.createMany).toHaveBeenCalledWith({
         data: [],
       });
     });
@@ -278,35 +284,35 @@ describe('UsersService', () => {
       );
 
       await expect(
-        service.adicionarSetoresAoUsuario('user-inexistente', [1]),
+        service.adicionarRegioesAoUsuario('user-inexistente', [1]),
       ).rejects.toThrow(NotFoundException);
 
-      expect(prismaService.usuarioSetor.deleteMany).not.toHaveBeenCalled();
-      expect(prismaService.usuarioSetor.createMany).not.toHaveBeenCalled();
+      expect(prismaService.usuarioRegiao.deleteMany).not.toHaveBeenCalled();
+      expect(prismaService.usuarioRegiao.createMany).not.toHaveBeenCalled();
     });
 
-    it('não altera vínculos quando algum setor não existe', async () => {
+    it('não altera vínculos quando alguma região não existe', async () => {
       configurarTransacao();
       vi.mocked(prismaService.user.findUniqueOrThrow).mockResolvedValue({
         id: 'user-1',
       } as never);
-      vi.mocked(prismaService.setor.findMany).mockResolvedValue([
+      vi.mocked(prismaService.regiao.findMany).mockResolvedValue([
         { id: 1 },
       ] as never);
 
       await expect(
-        service.adicionarSetoresAoUsuario('user-1', [1, 99]),
+        service.adicionarRegioesAoUsuario('user-1', [1, 99]),
       ).rejects.toThrow(NotFoundException);
 
-      expect(prismaService.usuarioSetor.deleteMany).not.toHaveBeenCalled();
-      expect(prismaService.usuarioSetor.createMany).not.toHaveBeenCalled();
+      expect(prismaService.usuarioRegiao.deleteMany).not.toHaveBeenCalled();
+      expect(prismaService.usuarioRegiao.createMany).not.toHaveBeenCalled();
     });
 
     it('rejeita a operação sem executar a transação quando falta permissão', async () => {
       abilityServiceMock.ability.can.mockReturnValue(false);
 
       await expect(
-        service.adicionarSetoresAoUsuario('user-1', [1]),
+        service.adicionarRegioesAoUsuario('user-1', [1]),
       ).rejects.toThrow(ForbiddenException);
 
       expect(prismaService.$transaction).not.toHaveBeenCalled();

@@ -95,6 +95,7 @@ async function main() {
 
     const primeiraParoquia = await prisma.paroquia.findFirstOrThrow({
       orderBy: { id: 'asc' },
+      include: { setor: true },
     });
 
     await prisma.usuarioParoquia.create({
@@ -104,10 +105,10 @@ async function main() {
       },
     });
 
-    await prisma.usuarioSetor.create({
+    await prisma.usuarioRegiao.create({
       data: {
         userId: secretariaCnc.id,
-        setorId: primeiraParoquia.setorId,
+        regiaoId: primeiraParoquia.setor.regiaoId,
       },
     });
 

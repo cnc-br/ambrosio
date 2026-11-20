@@ -36,7 +36,7 @@ export class ParoquiaService extends BaseService {
     this.validateCreateAbility('paroquia');
     await this.dioceseService.findOne(createParoquiaDto.diocese.id);
     await this.setorService.findOne(createParoquiaDto.setor.id);
-    await this.validarSetorNoEscopoDoUsuario(createParoquiaDto.setor.id);
+    await this.validarRegiaoNoEscopoDoUsuario(createParoquiaDto.setor.id);
 
     try {
       const result = await this.prisma.$transaction(async (transaction) => {
@@ -119,7 +119,7 @@ export class ParoquiaService extends BaseService {
 
     if (updateParoquiaDto.setor) {
       await this.setorService.findOne(updateParoquiaDto.setor.id);
-      await this.validarSetorNoEscopoDoUsuario(updateParoquiaDto.setor.id);
+      await this.validarRegiaoNoEscopoDoUsuario(updateParoquiaDto.setor.id);
     }
 
     this.validarEnderecoPertenceParoquia(
@@ -202,24 +202,34 @@ export class ParoquiaService extends BaseService {
     // Distingue 404 (inexistente) de 403 (existente fora do escopo).
     await this.prisma.paroquia.findUniqueOrThrow({ where: { id } });
     throw new ForbiddenException(
-      'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+      'Você não tem permissão para gerenciar paróquias fora das suas regiões.',
     );
   }
 
-  private async validarSetorNoEscopoDoUsuario(setorId: number) {
+  private async validarRegiaoNoEscopoDoUsuario(setorId: number) {
     if (this.abilityService.ability.can('manage', 'all')) {
       return;
     }
 
-    const vinculo = await this.prisma.usuarioSetor.findFirst({
-      where: { userId: this.abilityService.userId, setorId },
+    const setorNaRegiao = await this.prisma.setor.findFirst({
+      where: {
+        id: setorId,
+        regiao: {
+          usuarioRegioes: { some: { userId: this.abilityService.userId } },
+        },
+      },
+      select: { id: true },
     });
 
-    if (!vinculo) {
-      throw new ForbiddenException(
-        'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
-      );
+    if (setorNaRegiao) {
+      return;
     }
+
+    // Distingue 404 (setor inexistente) de 403 (existente fora das regiões).
+    await this.prisma.setor.findUniqueOrThrow({ where: { id: setorId } });
+    throw new ForbiddenException(
+      'Você não tem permissão para gerenciar paróquias fora das suas regiões.',
+    );
   }
 
   private validarEnderecoPertenceParoquia(

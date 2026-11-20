@@ -53,7 +53,7 @@ updatedAt       DateTime @default(now()) @updatedAt
 - **Rotas públicas**: use `OptionalAuthGuard` + `@CurrentUser('id')`; grave a autoria quando houver token e `NULL` quando não houver.
 - **Tabelas sem rota de escrita**: mantenha os campos `NULL` até existir rota autenticada que os preencha.
 - **Não exposição**: `cadastradoPorId` e `atualizadoPorId` não podem aparecer nas respostas da API (o `AuditoriaInterceptor` global remove esses campos; não os recrie em serializers).
-- **Exceções** (não recebem auditoria): `user`, `usuarioParoquia`, `usuarioSetor`, `ScheduledJobExecution`, o enum `ScheduledJobStatus` e tabelas de vínculo simples sem autoria própria.
+- **Exceções** (não recebem auditoria): `user`, `usuarioParoquia`, `usuarioRegiao`, `ScheduledJobExecution`, o enum `ScheduledJobStatus` e tabelas de vínculo simples sem autoria própria.
 
 ---
 
@@ -72,4 +72,4 @@ Consulte [`docs/agents/domain.md`](docs/agents/domain.md) e [`CONTEXT.md`](https
 - **Pessoa**: Fiel cadastrado na base (schema `saopedro`).
 - **Papel**: Nível de autorização (`ADMIN`, `SECRETARIA_PAROQUIA`, `SECRETARIA_CNC`, `NAO_IDENTIFICADO`).
   - `SECRETARIA_PAROQUIA`: secretaria local, com escopo pelas paróquias vinculadas em `usuarioParoquia`.
-  - `SECRETARIA_CNC`: secretaria por setor, com escopo pelas paróquias dos setores vinculados em `usuarioSetor` e com gestão (criação, atualização e exclusão) de paróquias.
+  - `SECRETARIA_CNC`: secretaria por região, com escopo pelas paróquias dos setores das regiões vinculadas em `usuarioRegiao` e com gestão (criação, atualização e exclusão) de paróquias.

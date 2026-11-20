@@ -8,7 +8,7 @@ Define o contrato de exposição do recurso User na API: os campos retornados ao
 
 ### Requirement: Contrato de resposta do detalhe do usuário
 
-Ao detalhar um usuário pelo identificador, o sistema SHALL retornar um objeto `User` com os campos `id`, `email`, `role`, `whatsapp`, `pessoaId`, `pessoa`, `paroquias`, `verifiedWhatsapp`, `active` e `createdAt`, sem campos internos do registro.
+Ao detalhar um usuário pelo identificador, o sistema SHALL retornar um objeto `User` com os campos `id`, `email`, `role`, `whatsapp`, `pessoaId`, `pessoa`, `paroquias`, `regioes`, `verifiedWhatsapp`, `active` e `createdAt`, sem campos internos do registro.
 
 #### Scenario: Usuário com pessoa vinculada
 - **WHEN** um usuário com `pessoaId` preenchido é detalhado
@@ -53,3 +53,15 @@ O fluxo de troca de senha SHALL continuar validando a senha atual do usuário co
 #### Scenario: Troca com senha atual incorreta
 - **WHEN** um usuário autenticado troca a senha informando a senha atual incorreta
 - **THEN** o fluxo responde 401 sem alterar a senha armazenada
+
+### Requirement: Regiões do usuário na resposta
+
+O campo `regioes` SHALL conter as regiões vinculadas ao usuário em `usuarioRegiao` como objetos com `id` e `descricao`; um usuário sem vínculos SHALL ter `regioes` como lista vazia. O campo SHALL existir mesmo quando a lista estiver vazia, para que o `ADMIN` distinga "sem regiões" de "campo ausente".
+
+#### Scenario: Usuário com regiões vinculadas
+- **WHEN** um usuário possui vínculos em `usuarioRegiao`
+- **THEN** `regioes` contém um objeto por vínculo, cada um com `id` e `descricao` da região
+
+#### Scenario: Usuário sem regiões vinculadas
+- **WHEN** um usuário não possui vínculos em `usuarioRegiao`
+- **THEN** `regioes` é uma lista vazia

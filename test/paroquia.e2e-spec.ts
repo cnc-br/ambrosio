@@ -705,7 +705,7 @@ describe('ParoquiaController (e2e)', () => {
       };
     };
 
-    it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra paróquia no próprio setor`, async () => {
+    it(`/${principal} (POST) - 201 | SECRETARIA_CNC cadastra paróquia na própria região`, async () => {
       const descricao = `CNC própria ${Date.now()}`.slice(0, 50);
 
       const response = await request(app.getHttpServer())
@@ -718,11 +718,11 @@ describe('ParoquiaController (e2e)', () => {
       expect(response.body.data.setor.id).toBe(1);
     });
 
-    it(`/${principal} (POST) - 403 | SECRETARIA_CNC não cadastra paróquia em setor alheio`, async () => {
+    it(`/${principal} (POST) - 403 | SECRETARIA_CNC não cadastra paróquia em setor de outra região`, async () => {
       await request(app.getHttpServer())
         .post(`/${principal}`)
         .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
-        .send(payloadCreate(2, `CNC alheia ${Date.now()}`.slice(0, 50)))
+        .send(payloadCreate(5, `CNC alheia ${Date.now()}`.slice(0, 50)))
         .expect(403)
         .expect((res) => {
           expect(res.body.error).toBe('Forbidden');
@@ -730,7 +730,7 @@ describe('ParoquiaController (e2e)', () => {
         });
     });
 
-    it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC atualiza paróquia do próprio setor`, async () => {
+    it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC atualiza paróquia da própria região`, async () => {
       const paroquia = await criarParoquiaDireto(1);
 
       const response = await request(app.getHttpServer())
@@ -742,8 +742,8 @@ describe('ParoquiaController (e2e)', () => {
       expect(response.body.data.id).toBe(paroquia.id);
     });
 
-    it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC não atualiza paróquia de setor alheio`, async () => {
-      const paroquia = await criarParoquiaDireto(2);
+    it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC não atualiza paróquia de setor de outra região`, async () => {
+      const paroquia = await criarParoquiaDireto(5);
 
       await request(app.getHttpServer())
         .patch(`/${principal}/${paroquia.id}`)
@@ -756,7 +756,7 @@ describe('ParoquiaController (e2e)', () => {
         });
     });
 
-    it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC não move paróquia para setor alheio`, async () => {
+    it(`/${principal}/:id (PATCH) - 403 | SECRETARIA_CNC não move paróquia para setor de outra região`, async () => {
       const paroquia = await criarParoquiaDireto(1);
 
       await request(app.getHttpServer())
@@ -764,7 +764,7 @@ describe('ParoquiaController (e2e)', () => {
         .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
         .send({
           ...(await payloadUpdate(paroquia.id)),
-          setor: { id: 2 },
+          setor: { id: 5 },
         })
         .expect(403)
         .expect((res) => {
@@ -773,7 +773,22 @@ describe('ParoquiaController (e2e)', () => {
         });
     });
 
-    it(`/${principal}/:id (DELETE) - 200 | SECRETARIA_CNC exclui paróquia do próprio setor`, async () => {
+    it(`/${principal}/:id (PATCH) - 200 | SECRETARIA_CNC move paróquia para outro setor da própria região`, async () => {
+      const paroquia = await criarParoquiaDireto(1);
+
+      const response = await request(app.getHttpServer())
+        .patch(`/${principal}/${paroquia.id}`)
+        .set('Authorization', `Bearer ${tokenSecretariaCnc}`)
+        .send({
+          ...(await payloadUpdate(paroquia.id)),
+          setor: { id: 2 },
+        })
+        .expect(200);
+
+      expect(response.body.data.setor.id).toBe(2);
+    });
+
+    it(`/${principal}/:id (DELETE) - 200 | SECRETARIA_CNC exclui paróquia da própria região`, async () => {
       const paroquia = await criarParoquiaDireto(1);
 
       await request(app.getHttpServer())
@@ -782,8 +797,8 @@ describe('ParoquiaController (e2e)', () => {
         .expect(200);
     });
 
-    it(`/${principal}/:id (DELETE) - 403 | SECRETARIA_CNC não exclui paróquia de setor alheio`, async () => {
-      const paroquia = await criarParoquiaDireto(2);
+    it(`/${principal}/:id (DELETE) - 403 | SECRETARIA_CNC não exclui paróquia de setor de outra região`, async () => {
+      const paroquia = await criarParoquiaDireto(5);
 
       await request(app.getHttpServer())
         .delete(`/${principal}/${paroquia.id}`)

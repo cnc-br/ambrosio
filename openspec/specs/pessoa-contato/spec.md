@@ -144,18 +144,18 @@ O sistema SHALL exigir autenticação e permissão de atualização sobre o recu
 
 ### Requirement: Escopo de paróquia na criação de contato
 
-O sistema SHALL permitir que `SECRETARIA_CNC` crie contato por `POST /pessoa/:id/contato` apenas para pessoa no escopo do usuário. `ADMIN` SHALL manter a criação irrestrita. Pessoa sem vínculo ativo SHALL ser considerada no escopo.
+O sistema SHALL permitir que `SECRETARIA_PAROQUIA` crie contato por `POST /pessoa/:id/contato` apenas para pessoa nas suas paróquias, e que `SECRETARIA_CNC` crie contato apenas para pessoa nas paróquias das suas regiões. `ADMIN` SHALL manter a criação irrestrita. Pessoa sem vínculo ativo SHALL ser considerada no escopo.
 
 #### Scenario: Criação de contato em pessoa do escopo
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X chama `POST /pessoa/:id/contato` para uma pessoa com vínculo ativo em comunidade da paróquia X
+- **WHEN** um usuário `SECRETARIA_PAROQUIA` vinculado à paróquia X chama `POST /pessoa/:id/contato` para uma pessoa com vínculo ativo em comunidade da paróquia X
 - **THEN** o sistema responde 201 e o contato é criado
 
 #### Scenario: Criação de contato em pessoa sem vínculo ativo
-- **WHEN** um usuário `SECRETARIA_CNC` chama `POST /pessoa/:id/contato` para uma pessoa sem nenhum vínculo ativo com comunidade
+- **WHEN** um usuário de secretaria chama `POST /pessoa/:id/contato` para uma pessoa sem nenhum vínculo ativo com comunidade
 - **THEN** o sistema responde 201 e o contato é criado
 
 #### Scenario: Criação de contato em pessoa fora do escopo
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X chama `POST /pessoa/:id/contato` para uma pessoa cujo vínculo ativo está na paróquia Y
+- **WHEN** um usuário `SECRETARIA_PAROQUIA` vinculado à paróquia X chama `POST /pessoa/:id/contato` para uma pessoa cujo vínculo ativo está na paróquia Y
 - **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem criar o contato
 
 #### Scenario: ADMIN cria contato
@@ -166,20 +166,28 @@ O sistema SHALL permitir que `SECRETARIA_CNC` crie contato por `POST /pessoa/:id
 - **WHEN** um usuário com permissão chama `POST /pessoa/:id/contato` com um id de pessoa inexistente
 - **THEN** o sistema responde 404 com `message` `O registro de 'Pessoa' não foi encontrado.` e `statusCode` 404, sem criar o contato
 
+#### Scenario: SECRETARIA_CNC cria contato em pessoa da própria região
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R chama `POST /pessoa/:id/contato` para uma pessoa com vínculo ativo em comunidade de paróquia da região R
+- **THEN** o sistema responde 201 e o contato é criado
+
+#### Scenario: SECRETARIA_CNC cria contato em pessoa fora da região
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R chama `POST /pessoa/:id/contato` para uma pessoa cujo vínculo ativo está em paróquia de outra região
+- **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem criar o contato
+
 ### Requirement: Escopo de paróquia na atualização de contato
 
-O sistema SHALL permitir que `SECRETARIA_CNC` atualize contato por `PATCH /pessoa/:id/contato/:contatoId` apenas para pessoa no escopo do usuário. `ADMIN` SHALL manter a atualização irrestrita. Pessoa sem vínculo ativo SHALL ser considerada no escopo.
+O sistema SHALL permitir que `SECRETARIA_PAROQUIA` atualize contato por `PATCH /pessoa/:id/contato/:contatoId` apenas para pessoa nas suas paróquias, e que `SECRETARIA_CNC` atualize contato apenas para pessoa nas paróquias das suas regiões. `ADMIN` SHALL manter a atualização irrestrita. Pessoa sem vínculo ativo SHALL ser considerada no escopo.
 
 #### Scenario: Atualização de contato em pessoa do escopo
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa com vínculo ativo em comunidade da paróquia X
+- **WHEN** um usuário `SECRETARIA_PAROQUIA` vinculado à paróquia X chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa com vínculo ativo em comunidade da paróquia X
 - **THEN** o sistema responde 200 e o contato é atualizado
 
 #### Scenario: Atualização de contato em pessoa sem vínculo ativo
-- **WHEN** um usuário `SECRETARIA_CNC` chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa sem nenhum vínculo ativo com comunidade
+- **WHEN** um usuário de secretaria chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa sem nenhum vínculo ativo com comunidade
 - **THEN** o sistema responde 200 e o contato é atualizado
 
 #### Scenario: Atualização de contato em pessoa fora do escopo
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa cujo vínculo ativo está na paróquia Y
+- **WHEN** um usuário `SECRETARIA_PAROQUIA` vinculado à paróquia X chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa cujo vínculo ativo está na paróquia Y
 - **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem atualizar o contato
 
 #### Scenario: ADMIN atualiza contato
@@ -189,3 +197,11 @@ O sistema SHALL permitir que `SECRETARIA_CNC` atualize contato por `PATCH /pesso
 #### Scenario: Pessoa inexistente na atualização de contato
 - **WHEN** um usuário com permissão chama `PATCH /pessoa/:id/contato/:contatoId` com um id de pessoa inexistente
 - **THEN** o sistema responde 404 com `message` `O registro de 'Pessoa' não foi encontrado.` e `statusCode` 404, sem chamar a São Pedro
+
+#### Scenario: SECRETARIA_CNC atualiza contato em pessoa da própria região
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa com vínculo ativo em comunidade de paróquia da região R
+- **THEN** o sistema responde 200 e o contato é atualizado
+
+#### Scenario: SECRETARIA_CNC atualiza contato em pessoa fora da região
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R chama `PATCH /pessoa/:id/contato/:contatoId` para uma pessoa cujo vínculo ativo está em paróquia de outra região
+- **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem atualizar o contato

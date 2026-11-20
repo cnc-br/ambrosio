@@ -24,6 +24,9 @@ const rawUser = {
       },
     },
   ],
+  usuarioRegioes: [
+    { regiao: { id: 3, descricao: 'Região Franca' } },
+  ],
 };
 
 describe('serializeUserResponse', () => {
@@ -36,6 +39,7 @@ describe('serializeUserResponse', () => {
       role: rawUser.role,
       whatsapp: rawUser.whatsapp,
       paroquias: rawUser.usuarioParoquias.map(({ paroquia }) => paroquia),
+      regioes: rawUser.usuarioRegioes.map(({ regiao }) => regiao),
       verifiedWhatsapp: rawUser.verifiedWhatsapp,
       active: rawUser.active,
       createdAt: rawUser.createdAt,
@@ -94,5 +98,17 @@ describe('serializeUserResponse', () => {
     const result = serializeUserResponse({ ...rawUser, usuarioParoquias: [] });
 
     expect(result.paroquias).toEqual([]);
+  });
+
+  it('mapeia as regiões vinculadas a partir de usuarioRegioes', () => {
+    const result = serializeUserResponse(rawUser);
+
+    expect(result.regioes).toEqual([{ id: 3, descricao: 'Região Franca' }]);
+  });
+
+  it('retorna lista vazia de regiões quando o usuário não tem vínculos', () => {
+    const result = serializeUserResponse({ ...rawUser, usuarioRegioes: [] });
+
+    expect(result.regioes).toEqual([]);
   });
 });

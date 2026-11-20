@@ -8,7 +8,7 @@ Garante que toda criação e edição de registros em qualquer tabela registre o
 
 ### Requirement: Campos de auditoria em todas as tabelas
 
-O sistema SHALL possuir, em toda tabela com exceção de `user`, `usuarioParoquia`, `usuarioSetor`, `ScheduledJobExecution` e `ScheduledJobStatus` (enum), os campos `cadastradoPorId` e `atualizadoPorId` (FK opcional para `user`, com índices e remoção em cascata para `NULL`), além de `createdAt` e `updatedAt` quando não existirem.
+O sistema SHALL possuir, em toda tabela com exceção de `user`, `usuarioParoquia`, `usuarioRegiao`, `ScheduledJobExecution` e `ScheduledJobStatus` (enum), os campos `cadastradoPorId` e `atualizadoPorId` (FK opcional para `user`, com índices e remoção em cascata para `NULL`), além de `createdAt` e `updatedAt` quando não existirem.
 
 #### Scenario: Tabela existente sem auditoria recebe os campos
 
@@ -22,7 +22,7 @@ O sistema SHALL possuir, em toda tabela com exceção de `user`, `usuarioParoqui
 
 #### Scenario: Tabelas excluídas não recebem auditoria
 
-- **WHEN** as tabelas `user`, `usuarioParoquia`, `usuarioSetor` e `ScheduledJobExecution` são inspecionadas
+- **WHEN** as tabelas `user`, `usuarioParoquia`, `usuarioRegiao` e `ScheduledJobExecution` são inspecionadas
 - **THEN** nenhuma delas possui `cadastradoPorId` nem `atualizadoPorId`
 
 #### Scenario: Campos auditáveis são opcionais no banco

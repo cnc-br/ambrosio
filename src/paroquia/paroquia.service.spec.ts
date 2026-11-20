@@ -167,8 +167,9 @@ describe('ParoquiaService', () => {
         findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }),
       };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (prismaService as any).usuarioSetor = {
+      (prismaService as any).setor = {
         findFirst: vi.fn().mockResolvedValue({ id: 1 }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 2 }),
       };
 
       paroquiaUpdateMock = vi.fn();
@@ -278,12 +279,15 @@ describe('ParoquiaService', () => {
           callback({}),
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (prismaService as any).usuarioSetor = { findFirst: vi.fn() };
+        (prismaService as any).setor = {
+          findFirst: vi.fn(),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 2 }),
+        };
       });
 
-      it('SECRETARIA_CNC cadastra no próprio setor', async () => {
+      it('SECRETARIA_CNC cadastra na própria região', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (prismaService as any).usuarioSetor.findFirst.mockResolvedValue({
+        (prismaService as any).setor.findFirst.mockResolvedValue({
           id: 1,
         });
 
@@ -291,32 +295,38 @@ describe('ParoquiaService', () => {
 
         expect(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (prismaService as any).usuarioSetor.findFirst,
+          (prismaService as any).setor.findFirst,
         ).toHaveBeenCalledWith({
-          where: { userId: 'usuario-cnc', setorId: 2 },
+          where: {
+            id: 2,
+            regiao: {
+              usuarioRegioes: { some: { userId: 'usuario-cnc' } },
+            },
+          },
+          select: { id: true },
         });
         expect(result.setor.id).toBe(2);
       });
 
-      it('SECRETARIA_CNC recebe 403 ao cadastrar em setor alheio', async () => {
+      it('SECRETARIA_CNC recebe 403 ao cadastrar em setor de outra região', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (prismaService as any).usuarioSetor.findFirst.mockResolvedValue(null);
+        (prismaService as any).setor.findFirst.mockResolvedValue(null);
 
         await expect(service.create(createDto as never)).rejects.toThrow(
-          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+          'Você não tem permissão para gerenciar paróquias fora das suas regiões.',
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((prismaService as any).$transaction).not.toHaveBeenCalled();
       });
 
-      it('ADMIN cadastra sem restrição de setor', async () => {
+      it('ADMIN cadastra sem restrição de região', async () => {
         criarAbility(UserRoleEnum.ADMIN, 'usuario-admin');
 
         const result = await service.create(createDto as never);
 
         expect(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (prismaService as any).usuarioSetor.findFirst,
+          (prismaService as any).setor.findFirst,
         ).not.toHaveBeenCalled();
         expect(result.setor.id).toBe(2);
       });
@@ -420,8 +430,9 @@ describe('ParoquiaService', () => {
           findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 1 }),
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (prismaService as any).usuarioSetor = {
+        (prismaService as any).setor = {
           findFirst: vi.fn().mockResolvedValue({ id: 1 }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 2 }),
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prismaService as any).$transaction = vi.fn((callback: any) =>
@@ -429,12 +440,12 @@ describe('ParoquiaService', () => {
         );
       });
 
-      it('SECRETARIA_CNC recebe 403 ao atualizar paróquia de setor alheio', async () => {
+      it('SECRETARIA_CNC recebe 403 ao atualizar paróquia de setor de outra região', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (prismaService as any).paroquia.findFirst.mockResolvedValue(null);
 
         await expect(service.update(1, dtoBase)).rejects.toThrow(
-          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+          'Você não tem permissão para gerenciar paróquias fora das suas regiões.',
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((prismaService as any).$transaction).not.toHaveBeenCalled();
@@ -453,15 +464,40 @@ describe('ParoquiaService', () => {
         );
       });
 
-      it('SECRETARIA_CNC recebe 403 ao mover paróquia para setor alheio', async () => {
+      it('SECRETARIA_CNC recebe 403 ao mover paróquia para setor de outra região', async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (prismaService as any).usuarioSetor.findFirst.mockResolvedValue(null);
+        (prismaService as any).setor.findFirst.mockResolvedValue(null);
 
         await expect(
           service.update(1, { ...dtoBase, setor: { id: 2 } }),
         ).rejects.toThrow(
-          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+          'Você não tem permissão para gerenciar paróquias fora das suas regiões.',
         );
+      });
+
+      it('SECRETARIA_CNC atualiza paróquia e move para setor da própria região', async () => {
+        const update = vi.fn().mockResolvedValue(paroquiaRaw(2));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (prismaService as any).$transaction = vi.fn((callback: any) =>
+          callback({ paroquia: { update } }),
+        );
+
+        const result = await service.update(1, {
+          ...dtoBase,
+          setor: { id: 2 },
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        expect((prismaService as any).setor.findFirst).toHaveBeenCalledWith({
+          where: {
+            id: 2,
+            regiao: {
+              usuarioRegioes: { some: { userId: 'usuario-cnc' } },
+            },
+          },
+          select: { id: true },
+        });
+        expect(result.setor.id).toBe(2);
       });
     });
 
@@ -478,15 +514,33 @@ describe('ParoquiaService', () => {
         (prismaService as any).$transaction = vi.fn();
       });
 
-      it('SECRETARIA_CNC recebe 403 ao excluir paróquia de setor alheio', async () => {
+      it('SECRETARIA_CNC recebe 403 ao excluir paróquia de setor de outra região', async () => {
         await expect(service.remove(1)).rejects.toThrow(
-          'Você não tem permissão para gerenciar paróquias fora dos seus setores.',
+          'Você não tem permissão para gerenciar paróquias fora das suas regiões.',
         );
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((prismaService as any).$transaction).not.toHaveBeenCalled();
       });
 
-      it('ADMIN exclui sem restrição de setor', async () => {
+      it('SECRETARIA_CNC exclui paróquia da própria região', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const prismaMock = (prismaService as any);
+        prismaMock.paroquia.findFirst.mockResolvedValue({ id: 1 });
+        prismaMock.$transaction = vi.fn((callback: never) =>
+          (callback as (tx: unknown) => unknown)({
+            paroquia: {
+              delete: vi.fn().mockResolvedValue(paroquiaRaw(1)),
+            },
+            endereco: { delete: vi.fn().mockResolvedValue({ id: 9 }) },
+          }),
+        );
+
+        const result = await service.remove(1);
+
+        expect(result.id).toBe(1);
+      });
+
+      it('ADMIN exclui sem restrição de região', async () => {
         criarAbility(UserRoleEnum.ADMIN, 'usuario-admin');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const prismaMock = (prismaService as any);
