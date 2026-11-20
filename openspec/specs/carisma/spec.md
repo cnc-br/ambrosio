@@ -8,16 +8,16 @@ Define o escopo de paróquia para adicionar e remover carismas de uma pessoa, ga
 
 ### Requirement: Escopo de paróquia na atualização de carismas de pessoa
 
-O sistema SHALL permitir que `SECRETARIA_CNC` adicione ou remova carismas por `POST /carismas/pessoa/:pessoaId` apenas para pessoas com vínculo ativo em uma das suas paróquias. `ADMIN` SHALL manter a operação irrestrita. Pessoa sem vínculo ativo SHALL ser considerada no escopo.
+O sistema SHALL permitir que `SECRETARIA_PAROQUIA` adicione ou remova carismas por `POST /carismas/pessoa/:pessoaId` apenas para pessoas com vínculo ativo em uma das suas paróquias, e que `SECRETARIA_CNC` faça o mesmo para pessoas em paróquias das suas regiões. `ADMIN` SHALL manter a operação irrestrita. Pessoa sem vínculo ativo SHALL ser considerada no escopo.
 
 #### Scenario: SECRETARIA_CNC adiciona carismas a pessoa da própria paróquia
 
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X envia `POST /carismas/pessoa/:pessoaId` com `carismaIds` para uma pessoa com vínculo ativo em comunidade da paróquia X
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R envia `POST /carismas/pessoa/:pessoaId` para uma pessoa com vínculo ativo em comunidade de paróquia cujo setor pertence a R
 - **THEN** o sistema responde 201 e os carismas são adicionados
 
 #### Scenario: SECRETARIA_CNC remove carismas de pessoa da própria paróquia
 
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X envia `POST /carismas/pessoa/:pessoaId` com uma lista de `carismaIds` que exclui carismas já vinculados à pessoa, e a pessoa tem vínculo ativo em comunidade da paróquia X
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R envia `POST /carismas/pessoa/:pessoaId` com uma lista de `carismaIds` que exclui carismas já vinculados à pessoa, e a pessoa tem vínculo ativo em comunidade de paróquia da região R
 - **THEN** o sistema responde 201 e os carismas ausentes da lista são removidos
 
 #### Scenario: SECRETARIA_CNC adiciona carismas a pessoa sem vínculo ativo
@@ -27,12 +27,12 @@ O sistema SHALL permitir que `SECRETARIA_CNC` adicione ou remova carismas por `P
 
 #### Scenario: SECRETARIA_CNC adiciona carismas a pessoa fora do escopo
 
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X envia `POST /carismas/pessoa/:pessoaId` para uma pessoa cujo vínculo ativo está na paróquia Y
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R envia `POST /carismas/pessoa/:pessoaId` para uma pessoa cujo vínculo ativo está em paróquia de outra região
 - **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem adicionar carismas
 
 #### Scenario: SECRETARIA_CNC remove carismas de pessoa fora do escopo
 
-- **WHEN** um usuário `SECRETARIA_CNC` vinculado à paróquia X envia `POST /carismas/pessoa/:pessoaId` para uma pessoa cujo vínculo ativo está na paróquia Y, com uma lista de `carismaIds` que exclui carismas já vinculados
+- **WHEN** um usuário `SECRETARIA_CNC` vinculado à região R envia `POST /carismas/pessoa/:pessoaId` para uma pessoa cujo vínculo ativo está em paróquia de outra região, com uma lista de `carismaIds` que exclui carismas já vinculados
 - **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem remover carismas
 
 #### Scenario: ADMIN adiciona e remove carismas
@@ -49,3 +49,13 @@ O sistema SHALL permitir que `SECRETARIA_CNC` adicione ou remova carismas por `P
 
 - **WHEN** um usuário autenticado sem permissão de atualização de pessoa envia `POST /carismas/pessoa/:pessoaId`
 - **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem alterar carismas
+
+#### Scenario: SECRETARIA_PAROQUIA adiciona carismas a pessoa da própria paróquia
+
+- **WHEN** um usuário `SECRETARIA_PAROQUIA` vinculado à paróquia X envia `POST /carismas/pessoa/:pessoaId` para uma pessoa com vínculo ativo em comunidade da paróquia X
+- **THEN** o sistema responde 201 e os carismas são adicionados
+
+#### Scenario: SECRETARIA_PAROQUIA adiciona carismas a pessoa de outra paróquia
+
+- **WHEN** um usuário `SECRETARIA_PAROQUIA` vinculado à paróquia X envia `POST /carismas/pessoa/:pessoaId` para uma pessoa cujo vínculo ativo está na paróquia Y
+- **THEN** o sistema responde 403 com `error` `Forbidden` e `statusCode` 403, sem adicionar carismas

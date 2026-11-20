@@ -350,7 +350,7 @@ describe('CasalService', () => {
       expect(result).toEqual([]);
     });
 
-    it('SECRETARIA_CNC filtra cônjuges pelos setores do usuário', async () => {
+    it('SECRETARIA_CNC filtra cônjuges pelas regiões do usuário', async () => {
       setAbility(UserRoleEnum.SECRETARIA_CNC, 'usuario-cnc');
 
       await service.findAllBySexoEstadoCivilCasado('M');
@@ -371,8 +371,12 @@ describe('CasalService', () => {
                               {
                                 setor: {
                                   is: {
-                                    usuarioSetores: {
-                                      some: { userId: 'usuario-cnc' },
+                                    regiao: {
+                                      is: {
+                                        usuarioRegioes: {
+                                          some: { userId: 'usuario-cnc' },
+                                        },
+                                      },
                                     },
                                   },
                                 },

@@ -82,10 +82,16 @@ const paroquiaDoUsuario = (user: SecretariaUser): PrismaQuery => ({
 
 /**
  * Projeção única da condição de paróquia do `SECRETARIA_CNC`, cujo escopo
- * alcança todas as paróquias dos setores vinculados a ele.
+ * alcança todas as paróquias dos setores das regiões vinculadas a ele.
  */
-const paroquiaDoSetor = (user: SecretariaUser): PrismaQuery => ({
-  setor: { is: { usuarioSetores: { some: { userId: user.id } } } },
+const paroquiaDaRegiao = (user: SecretariaUser): PrismaQuery => ({
+  setor: {
+    is: {
+      regiao: {
+        is: { usuarioRegioes: { some: { userId: user.id } } },
+      },
+    },
+  },
 });
 
 const comunidadeDe = (paroquia: PrismaQuery): PrismaQuery => ({
@@ -126,8 +132,8 @@ const escopoPorParoquia = (user: SecretariaUser): EscopoSecretaria => {
   };
 };
 
-const escopoPorSetor = (user: SecretariaUser): EscopoSecretaria => {
-  const paroquia = paroquiaDoSetor(user);
+const escopoPorRegiao = (user: SecretariaUser): EscopoSecretaria => {
+  const paroquia = paroquiaDaRegiao(user);
   return {
     paroquia,
     comunidade: comunidadeDe(paroquia),
@@ -199,11 +205,11 @@ const secretariaPorParoquia: DefinePermissions = (user, builder) => {
   aplicarPermissoes(builder, permissoesSecretaria(escopoPorParoquia(user)));
 };
 
-const secretariaPorSetor: DefinePermissions = (user, builder) => {
-  const escopo = escopoPorSetor(user);
+const secretariaPorRegiao: DefinePermissions = (user, builder) => {
+  const escopo = escopoPorRegiao(user);
   aplicarPermissoes(builder, permissoesSecretaria(escopo));
-  // Capacidades exclusivas do SECRETARIA_CNC: gestão de paróquias dentro do
-  // próprio setor, CRUD irrestrito de diocese (a leitura já vem da base) e
+  // Capacidades exclusivas do SECRETARIA_CNC: gestão de paróquias dentro das
+  // próprias regiões, CRUD irrestrito de diocese (a leitura já vem da base) e
   // manutenção nacional da hierarquia do mapa (macro-região, região e setor).
   aplicarPermissoes(builder, [
     { action: 'create', subject: 'diocese' },
@@ -262,7 +268,7 @@ const rolePermissionsMap: Record<UserRoleEnum, DefinePermissions> = {
   CATEQUISTA_REGIAO: grantReadPessoaDiocese,
   CATEQUISTA_PAROQUIA: grantReadPessoaDiocese,
   SECRETARIA_PAROQUIA: secretariaPorParoquia,
-  SECRETARIA_CNC: secretariaPorSetor,
+  SECRETARIA_CNC: secretariaPorRegiao,
 };
 
 @Injectable({ scope: Scope.REQUEST })

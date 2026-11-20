@@ -1,9 +1,9 @@
 import { ArrayUnique, IsArray, IsInt, IsPositive } from 'class-validator';
 
-export class AdicionarSetoresAoUsuarioDto {
+export class AdicionarRegioesAoUsuarioDto {
   @IsArray()
   @ArrayUnique()
   @IsInt({ each: true })
   @IsPositive({ each: true })
-  setorIds: number[];
+  regiaoIds: number[];
 }

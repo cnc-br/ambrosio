@@ -113,9 +113,15 @@ describe('CaslAbilityService', () => {
   });
 
   describe('SECRETARIA_CNC', () => {
-    const paroquiaDoSetor = {
+    const paroquiaDaRegiao = {
       setor: {
-        is: { usuarioSetores: { some: { userId: 'usuario-secretaria-cnc' } } },
+        is: {
+          regiao: {
+            is: {
+              usuarioRegioes: { some: { userId: 'usuario-secretaria-cnc' } },
+            },
+          },
+        },
       },
     };
 
@@ -125,8 +131,8 @@ describe('CaslAbilityService', () => {
       );
     });
 
-    it('restringe a leitura e a escrita de comunidades aos setores do usuário', () => {
-      const condicaoEsperada = escopoComunidade(paroquiaDoSetor);
+    it('restringe a leitura e a escrita de comunidades às regiões do usuário', () => {
+      const condicaoEsperada = escopoComunidade(paroquiaDaRegiao);
 
       expect(accessibleBy(service.ability, 'read').comunidade).toEqual(
         condicaoEsperada,
@@ -139,9 +145,9 @@ describe('CaslAbilityService', () => {
       );
     });
 
-    it('restringe a atualização de pessoa aos setores do usuário', () => {
+    it('restringe a atualização de pessoa às regiões do usuário', () => {
       expect(accessibleBy(service.ability, 'update').pessoa).toEqual(
-        escopoPessoaUpdate(paroquiaDoSetor),
+        escopoPessoaUpdate(paroquiaDaRegiao),
       );
       expect(accessibleBy(service.ability, 'read').pessoa).toEqual({});
       expect(accessibleBy(service.ability, 'create').pessoa).toEqual({});
@@ -154,19 +160,19 @@ describe('CaslAbilityService', () => {
       expect(service.ability.can('create', 'etapa')).toBe(true);
     });
 
-    it('gerencia paróquias somente dentro dos setores do usuário', () => {
+    it('gerencia paróquias somente dentro das regiões do usuário', () => {
       expect(service.ability.can('create', 'paroquia')).toBe(true);
       expect(accessibleBy(service.ability, 'update').paroquia).toEqual({
-        OR: [paroquiaDoSetor],
+        OR: [paroquiaDaRegiao],
       });
       expect(accessibleBy(service.ability, 'delete').paroquia).toEqual({
-        OR: [paroquiaDoSetor],
+        OR: [paroquiaDaRegiao],
       });
     });
 
-    it('restringe a leitura de paróquias aos setores do usuário', () => {
+    it('restringe a leitura de paróquias às regiões do usuário', () => {
       expect(accessibleBy(service.ability, 'read').paroquia).toEqual({
-        OR: [paroquiaDoSetor],
+        OR: [paroquiaDaRegiao],
       });
     });
 

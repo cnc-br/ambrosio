@@ -133,6 +133,7 @@ describe('UserController (e2e)', () => {
     });
     expect(response.body.data).toHaveProperty('createdAt');
     expect(response.body.data.paroquias).toEqual([]);
+    expect(response.body.data.regioes).toEqual([]);
     expect(response.body.data).not.toHaveProperty('password');
     expect(response.body.data).not.toHaveProperty('resetPasswordToken');
     expect(response.body.data).not.toHaveProperty('resetPasswordExpires');
@@ -242,57 +243,57 @@ describe('UserController (e2e)', () => {
       });
   });
 
-  describe('/users/:id/setores (PATCH)', () => {
-    it('200 | substitui os setores vinculados ao usuário', async () => {
-      const setores = await prisma.setor.findMany({
+  describe('/users/:id/regioes (PATCH)', () => {
+    it('200 | substitui as regiões vinculadas ao usuário', async () => {
+      const regioes = await prisma.regiao.findMany({
         orderBy: { id: 'asc' },
         take: 2,
       });
-      const [primeiroSetor, segundoSetor] = setores;
+      const [primeiraRegiao, segundaRegiao] = regioes;
 
       const response = await request(app.getHttpServer())
-        .patch(`/users/${createdUserId}/setores`)
+        .patch(`/users/${createdUserId}/regioes`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ setorIds: [primeiroSetor.id, segundoSetor.id] });
+        .send({ regiaoIds: [primeiraRegiao.id, segundaRegiao.id] });
 
       expect(response.status).toBe(200);
       expect(response.body.data).toEqual({ count: 2 });
 
-      const vinculos = await prisma.usuarioSetor.findMany({
+      const vinculos = await prisma.usuarioRegiao.findMany({
         where: { userId: createdUserId },
-        orderBy: { setorId: 'asc' },
+        orderBy: { regiaoId: 'asc' },
       });
-      expect(vinculos.map((vinculo) => vinculo.setorId)).toEqual([
-        primeiroSetor.id,
-        segundoSetor.id,
+      expect(vinculos.map((vinculo) => vinculo.regiaoId)).toEqual([
+        primeiraRegiao.id,
+        segundaRegiao.id,
       ]);
 
       const substituicao = await request(app.getHttpServer())
-        .patch(`/users/${createdUserId}/setores`)
+        .patch(`/users/${createdUserId}/regioes`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ setorIds: [segundoSetor.id] });
+        .send({ regiaoIds: [segundaRegiao.id] });
 
       expect(substituicao.status).toBe(200);
       expect(substituicao.body.data).toEqual({ count: 1 });
 
-      const vinculosAposSubstituicao = await prisma.usuarioSetor.findMany({
+      const vinculosAposSubstituicao = await prisma.usuarioRegiao.findMany({
         where: { userId: createdUserId },
       });
       expect(
-        vinculosAposSubstituicao.map((vinculo) => vinculo.setorId),
-      ).toEqual([segundoSetor.id]);
+        vinculosAposSubstituicao.map((vinculo) => vinculo.regiaoId),
+      ).toEqual([segundaRegiao.id]);
     });
 
-    it('200 | lista vazia remove todos os setores do usuário', async () => {
+    it('200 | lista vazia remove todas as regiões do usuário', async () => {
       const response = await request(app.getHttpServer())
-        .patch(`/users/${createdUserId}/setores`)
+        .patch(`/users/${createdUserId}/regioes`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ setorIds: [] });
+        .send({ regiaoIds: [] });
 
       expect(response.status).toBe(200);
       expect(response.body.data).toEqual({ count: 0 });
 
-      const vinculos = await prisma.usuarioSetor.count({
+      const vinculos = await prisma.usuarioRegiao.count({
         where: { userId: createdUserId },
       });
       expect(vinculos).toBe(0);
@@ -300,9 +301,9 @@ describe('UserController (e2e)', () => {
 
     it('404 | usuário inexistente não cria vínculos', async () => {
       const response = await request(app.getHttpServer())
-        .patch('/users/usuario-inexistente/setores')
+        .patch('/users/usuario-inexistente/regioes')
         .set('Authorization', `Bearer ${token}`)
-        .send({ setorIds: [1] });
+        .send({ regiaoIds: [1] });
 
       expect(response.status).toBe(404);
       expect(response.body.message).toBe(
@@ -312,20 +313,20 @@ describe('UserController (e2e)', () => {
     });
 
     it('400 | payload inválido não altera os vínculos', async () => {
-      const antes = await prisma.usuarioSetor.count({
+      const antes = await prisma.usuarioRegiao.count({
         where: { userId: createdUserId },
       });
 
       const response = await request(app.getHttpServer())
-        .patch(`/users/${createdUserId}/setores`)
+        .patch(`/users/${createdUserId}/regioes`)
         .set('Authorization', `Bearer ${token}`)
-        .send({ setorIds: 'nao-e-um-array' });
+        .send({ regiaoIds: 'nao-e-um-array' });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Bad Request');
       expect(response.body.statusCode).toBe(400);
 
-      const depois = await prisma.usuarioSetor.count({
+      const depois = await prisma.usuarioRegiao.count({
         where: { userId: createdUserId },
       });
       expect(depois).toBe(antes);
@@ -339,9 +340,9 @@ describe('UserController (e2e)', () => {
       const tokenSemPermissao = login.body.data.access_token;
 
       const response = await request(app.getHttpServer())
-        .patch(`/users/${createdUserId}/setores`)
+        .patch(`/users/${createdUserId}/regioes`)
         .set('Authorization', `Bearer ${tokenSemPermissao}`)
-        .send({ setorIds: [1] });
+        .send({ regiaoIds: [1] });
 
       expect(response.status).toBe(403);
       expect(response.body.message).toBe(

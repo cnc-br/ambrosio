@@ -424,7 +424,7 @@ model user {
   resetPasswordToken              String?
   resetPasswordExpires            DateTime?
   usuarioParoquias                usuarioParoquia[]
-  usuarioSetores                  usuarioSetor[]
+  usuarioRegioes                  usuarioRegiao[]
   paisesCadastrados               pais[]                @relation("PaisCadastradoPor")
   paisesAtualizados               pais[]                @relation("PaisAtualizadoPor")
   estadosCadastrados              estado[]              @relation("EstadoCadastradoPor")
@@ -501,7 +501,6 @@ model setor {
   ativo           Boolean        @default(true)
   regiaoId        Int
   paroquia        paroquia[]
-  usuarioSetores  usuarioSetor[]
   regiao          regiao         @relation(fields: [regiaoId], references: [id])
   cadastradoPorId String?
   atualizadoPorId String?
@@ -515,14 +514,14 @@ model setor {
   @@index([atualizadoPorId])
 }
 
-model usuarioSetor {
-  id      Int    @id @default(autoincrement())
-  userId  String
-  setorId Int
-  user    user   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  setor   setor  @relation(fields: [setorId], references: [id], onDelete: Cascade)
+model usuarioRegiao {
+  id       Int    @id @default(autoincrement())
+  userId   String
+  regiaoId Int
+  user     user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  regiao   regiao @relation(fields: [regiaoId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, setorId])
+  @@unique([userId, regiaoId])
 }
 
 model macroRegiao {
@@ -548,6 +547,7 @@ model regiao {
   ativo           Boolean     @default(true)
   macroRegiao     macroRegiao @relation(fields: [macroRegiaoId], references: [id])
   setor           setor[]
+  usuarioRegioes  usuarioRegiao[]
   cadastradoPorId String?
   atualizadoPorId String?
   cadastradoPor   user?       @relation("RegiaoCadastradoPor", fields: [cadastradoPorId], references: [id], onDelete: SetNull)

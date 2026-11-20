@@ -10,7 +10,7 @@ import {
   mockSaoPedroContatoService,
 } from './mocks/sao-pedro-api-mock.js';
 
-describe('SecretariaCncEscopoSecao (e2e)', () => {
+describe('SecretariaCncEscopoRegiao (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
@@ -19,11 +19,14 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
   let tokenCnc = '';
   let cncUserId = '';
 
-  let paroquiaSetor1: { id: number };
-  let paroquiaSetor2: { id: number };
-  let comunidadeSetor1: { id: number };
-  let comunidadeSetor1b: { id: number };
-  let comunidadeSetor2: { id: number };
+  let paroquiaPropria: { id: number };
+  let paroquiaExterna: { id: number };
+  let comunidadePropria: { id: number };
+  let comunidadePropria2: { id: number };
+  let comunidadeExterna: { id: number };
+  let enderecoExternoId = 0;
+  let setorExternoId = 0;
+  let regiaoExternaId = 0;
 
   let pessoaPropria: { id: number; externalId: string };
   let pessoaOutra: { id: number; externalId: string };
@@ -80,26 +83,44 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     });
   };
 
-  const criarParoquiaNoSetor2 = async () => {
+  const criarParoquiaEmOutraRegiao = async () => {
     const cidade = await prisma.cidade.findFirstOrThrow({
       where: { nome: 'Franca' },
     });
+
+    const regiao = await prisma.regiao.create({
+      data: {
+        descricao: `Regiao externa ${sufixo}`.slice(0, 100),
+        macroRegiaoId: 1,
+      },
+    });
+    regiaoExternaId = regiao.id;
+
+    const setor = await prisma.setor.create({
+      data: {
+        descricao: `Setor externo ${sufixo}`.slice(0, 50),
+        regiaoId: regiao.id,
+      },
+    });
+    setorExternoId = setor.id;
+
     const endereco = await prisma.endereco.create({
       data: {
         cep: '14400000',
-        logradouro: 'Rua do Setor 2',
+        logradouro: 'Rua de Outra Região',
         numero: '5',
         bairro: 'Centro',
         cidadeId: cidade.id,
       },
     });
+    enderecoExternoId = endereco.id;
 
     return prisma.paroquia.create({
       data: {
-        descricao: `Paroquia Setor 2 ${sufixo}`.slice(0, 50),
+        descricao: `Paroquia Externa ${sufixo}`.slice(0, 50),
         dioceseId: 1,
         enderecoId: endereco.id,
-        setorId: 2,
+        setorId: setor.id,
       },
     });
   };
@@ -120,7 +141,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
 
     const cnc = await prisma.user.findUniqueOrThrow({
       where: { email: 'secretaria-cnc@admin.com' },
-      include: { usuarioSetores: true },
+      include: { usuarioRegioes: true },
     });
     cncUserId = cnc.id;
 
@@ -129,62 +150,65 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
       .send({ email: 'secretaria-cnc@admin.com', password: 'admin' });
     tokenCnc = login.body.data.access_token;
 
-    const setorId = cnc.usuarioSetores[0].setorId;
-    paroquiaSetor1 = await prisma.paroquia.findFirstOrThrow({
-      where: { setorId },
+    const regiaoId = cnc.usuarioRegioes[0].regiaoId;
+    const setorProprio = await prisma.setor.findFirstOrThrow({
+      where: { regiaoId },
     });
-    comunidadeSetor1 = await prisma.comunidade.findFirstOrThrow({
-      where: { paroquiaId: paroquiaSetor1.id },
+    paroquiaPropria = await prisma.paroquia.findFirstOrThrow({
+      where: { setorId: setorProprio.id },
     });
-    comunidadeSetor1b = await prisma.comunidade.findFirstOrThrow({
+    comunidadePropria = await prisma.comunidade.findFirstOrThrow({
+      where: { paroquiaId: paroquiaPropria.id },
+    });
+    comunidadePropria2 = await prisma.comunidade.findFirstOrThrow({
       where: {
-        paroquiaId: paroquiaSetor1.id,
-        id: { not: comunidadeSetor1.id },
+        paroquiaId: paroquiaPropria.id,
+        id: { not: comunidadePropria.id },
       },
     });
 
-    paroquiaSetor2 = await criarParoquiaNoSetor2();
-    comunidadeSetor2 = await prisma.comunidade.create({
+    paroquiaExterna = await criarParoquiaEmOutraRegiao();
+    comunidadeExterna = await prisma.comunidade.create({
       data: {
         numeroDaComunidade: 1,
         quantidadeMembros: 10,
-        paroquiaId: paroquiaSetor2.id,
+        paroquiaId: paroquiaExterna.id,
       },
     });
 
     pessoaPropria = await criarPessoa(
-      `cnc-setor-propria-${sufixo}`,
+      `cnc-regiao-propria-${sufixo}`,
       'CNC Própria',
       'M',
     );
-    await criarVinculo(pessoaPropria.id, comunidadeSetor1.id);
+    await criarVinculo(pessoaPropria.id, comunidadePropria.id);
 
     pessoaOutra = await criarPessoa(
-      `cnc-setor-outra-${sufixo}`,
+      `cnc-regiao-outra-${sufixo}`,
       'CNC Outra',
       'F',
     );
-    await criarVinculo(pessoaOutra.id, comunidadeSetor2.id);
+    await criarVinculo(pessoaOutra.id, comunidadeExterna.id);
 
     pessoaSemVinculo = await criarPessoa(
-      `cnc-setor-sem-vinculo-${sufixo}`,
+      `cnc-regiao-sem-vinculo-${sufixo}`,
       'CNC Sem Vínculo',
       'M',
     );
 
     pessoaCasal1 = await criarPessoa(
-      `cnc-setor-casal-1-${sufixo}`,
+      `cnc-regiao-casal-1-${sufixo}`,
       'CNC Casal 1',
       'M',
     );
-    await criarVinculo(pessoaCasal1.id, comunidadeSetor1.id);
+    await criarVinculo(pessoaCasal1.id, comunidadePropria.id);
 
     pessoaCasal2 = await criarPessoa(
-      `cnc-setor-casal-2-${sufixo}`,
+      `cnc-regiao-casal-2-${sufixo}`,
       'CNC Casal 2',
       'F',
     );
-    await criarVinculo(pessoaCasal2.id, comunidadeSetor1b.id);
+    await criarVinculo(pessoaCasal2.id, comunidadePropria2.id);
 
     const carisma = await prisma.carisma.findFirstOrThrow();
     carismaId = carisma.id;
@@ -233,6 +257,24 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
   });
 
   afterAll(async () => {
+    // Remove a região/setor/paróquia criados para o cenário "de fora" para não
+    // afetar as contagens exatas dos e2e do mapa.
+    if (paroquiaExterna?.id) {
+      await prisma.comunidade.deleteMany({
+        where: { paroquiaId: paroquiaExterna.id },
+      });
+      await prisma.paroquia.deleteMany({ where: { id: paroquiaExterna.id } });
+    }
+    if (enderecoExternoId) {
+      await prisma.endereco.deleteMany({ where: { id: enderecoExternoId } });
+    }
+    if (setorExternoId) {
+      await prisma.setor.deleteMany({ where: { id: setorExternoId } });
+    }
+    if (regiaoExternaId) {
+      await prisma.regiao.deleteMany({ where: { id: regiaoExternaId } });
+    }
+
     await app.close();
   });
 
@@ -240,25 +282,25 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     vi.clearAllMocks();
   });
 
-  it('usuário SECRETARIA_CNC está vinculado a um setor', () => {
+  it('usuário SECRETARIA_CNC está vinculado a uma região', () => {
     expect(cncUserId).toBeDefined();
-    expect(paroquiaSetor1.id).not.toBe(paroquiaSetor2.id);
+    expect(paroquiaPropria.id).not.toBe(paroquiaExterna.id);
   });
 
-  it('/comunidade (GET) - 200 | lista apenas comunidades dos seus setores', async () => {
+  it('/comunidade (GET) - 200 | lista apenas comunidades das suas regiões', async () => {
     const response = await request(app.getHttpServer())
       .get('/comunidade')
       .set('Authorization', `Bearer ${tokenCnc}`);
 
     expect(response.status).toBe(200);
     const ids = response.body.data.map((comunidade: any) => comunidade.id);
-    expect(ids).toContain(comunidadeSetor1.id);
-    expect(ids).not.toContain(comunidadeSetor2.id);
+    expect(ids).toContain(comunidadePropria.id);
+    expect(ids).not.toContain(comunidadeExterna.id);
   });
 
-  it('/comunidade (POST) - 201 | cadastra comunidade em paróquia do seu setor', async () => {
+  it('/comunidade (POST) - 201 | cadastra comunidade em paróquia da sua região', async () => {
     const usados = await prisma.comunidade.findMany({
-      where: { paroquiaId: paroquiaSetor1.id },
+      where: { paroquiaId: paroquiaPropria.id },
       select: { numeroDaComunidade: true },
     });
     const numeroLivre = Array.from({ length: 30 }, (_, i) => i + 1).find(
@@ -271,21 +313,21 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
       .send({
         numeroDaComunidade: numeroLivre,
         quantidadeMembros: 8,
-        paroquiaId: paroquiaSetor1.id,
+        paroquiaId: paroquiaPropria.id,
       });
 
     expect(response.status).toBe(201);
-    expect(response.body.data.paroquia.id).toBe(paroquiaSetor1.id);
+    expect(response.body.data.paroquia.id).toBe(paroquiaPropria.id);
   });
 
-  it('/comunidade (POST) - 403 | não cadastra comunidade em paróquia de outro setor', async () => {
+  it('/comunidade (POST) - 403 | não cadastra comunidade em paróquia de outra região', async () => {
     const response = await request(app.getHttpServer())
       .post('/comunidade')
       .set('Authorization', `Bearer ${tokenCnc}`)
       .send({
         numeroDaComunidade: 29,
         quantidadeMembros: 8,
-        paroquiaId: paroquiaSetor2.id,
+        paroquiaId: paroquiaExterna.id,
       });
 
     expect(response.status).toBe(403);
@@ -293,9 +335,9 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it('/comunidade/:id (PATCH) - 403 | não atualiza comunidade de outro setor', async () => {
+  it('/comunidade/:id (PATCH) - 403 | não atualiza comunidade de outra região', async () => {
     const response = await request(app.getHttpServer())
-      .patch(`/comunidade/${comunidadeSetor2.id}`)
+      .patch(`/comunidade/${comunidadeExterna.id}`)
       .set('Authorization', `Bearer ${tokenCnc}`)
       .send({ quantidadeMembros: 20 });
 
@@ -315,7 +357,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     );
   });
 
-  it('/pessoa/:id (PATCH) - 200 | atualiza pessoa do seu setor', async () => {
+  it('/pessoa/:id (PATCH) - 200 | atualiza pessoa da sua região', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/pessoa/${pessoaPropria.id}`)
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -339,7 +381,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(response.status).toBe(200);
   });
 
-  it('/pessoa/:id (PATCH) - 403 | não atualiza pessoa de outro setor', async () => {
+  it('/pessoa/:id (PATCH) - 403 | não atualiza pessoa de outra região', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/pessoa/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -350,7 +392,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it('/pessoa/casal (POST) - 201 | cria casal com as duas pessoas no seu setor', async () => {
+  it('/pessoa/casal (POST) - 201 | cria casal com as duas pessoas na sua região', async () => {
     const response = await request(app.getHttpServer())
       .post('/pessoa/casal')
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -361,7 +403,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(response.body.data).toHaveProperty('pessoaMulherId');
   });
 
-  it('/pessoa/casal (POST) - 403 | não cria casal com pessoa de outro setor', async () => {
+  it('/pessoa/casal (POST) - 403 | não cria casal com pessoa de outra região', async () => {
     const response = await request(app.getHttpServer())
       .post('/pessoa/casal')
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -372,7 +414,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(response.body.statusCode).toBe(403);
   });
 
-  it('/pessoa/:id/contato (POST) - 201 | cria contato em pessoa do seu setor', async () => {
+  it('/pessoa/:id/contato (POST) - 201 | cria contato em pessoa da sua região', async () => {
     const response = await request(app.getHttpServer())
       .post(`/pessoa/${pessoaPropria.id}/contato`)
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -382,7 +424,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(mockSaoPedroContatoService.createExternalContato).toHaveBeenCalled();
   });
 
-  it('/pessoa/:id/contato (POST) - 403 | não cria contato em pessoa de outro setor', async () => {
+  it('/pessoa/:id/contato (POST) - 403 | não cria contato em pessoa de outra região', async () => {
     const response = await request(app.getHttpServer())
       .post(`/pessoa/${pessoaOutra.id}/contato`)
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -395,7 +437,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     ).not.toHaveBeenCalled();
   });
 
-  it('/carismas/pessoa/:pessoaId (POST) - 201 | atualiza carismas de pessoa do seu setor', async () => {
+  it('/carismas/pessoa/:pessoaId (POST) - 201 | atualiza carismas de pessoa da sua região', async () => {
     const response = await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaPropria.id}`)
       .set('Authorization', `Bearer ${tokenCnc}`)
@@ -405,7 +447,7 @@ describe('SecretariaCncEscopoSecao (e2e)', () => {
     expect(response.body.data.pessoaId).toBe(pessoaPropria.id);
   });
 
-  it('/carismas/pessoa/:pessoaId (POST) - 403 | não atualiza carismas de pessoa de outro setor', async () => {
+  it('/carismas/pessoa/:pessoaId (POST) - 403 | não atualiza carismas de pessoa de outra região', async () => {
     const response = await request(app.getHttpServer())
       .post(`/carismas/pessoa/${pessoaOutra.id}`)
       .set('Authorization', `Bearer ${tokenCnc}`)
