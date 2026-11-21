@@ -36,6 +36,7 @@ import { ResendModule } from 'nestjs-resend';
 import * as rTracer from 'cls-rtracer';
 import { ComunidadeModule } from './comunidade/comunidade.module.js';
 import { MaintenanceModule } from './maintenance/maintenance.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 
 const isElkEnabled = process.env.ELK_ENABLED === 'true';
 const elkLogFile =
@@ -159,6 +160,7 @@ function stringifyRequestBody(body: unknown): string | undefined {
     ExternalModule,
     HealthModule,
     MaintenanceModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
